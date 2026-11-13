@@ -53,6 +53,8 @@ function dispatch(body: Record<string, unknown>, ctx: ApiContext): unknown {
       return upsert(body, ctx);
     case "remove":
       return remove(body, ctx);
+    case "batch":
+      return batch(body, ctx);
     case "renameCategory":
       return renameCategory(body, ctx);
     default:
@@ -78,12 +80,19 @@ function list(body: Record<string, unknown>, ctx: ApiContext) {
   return out;
 }
 
-function upsert(body: Record<string, unknown>, ctx: ApiContext) {
-  const tab = requireTab(body.tab);
-  if (!Array.isArray(body.rows)) fail("BAD_REQUEST", "rows must be a list");
+type PreparedRow = { tab: TabName; row: Row; isUpdate: boolean };
+
+/**
+ * Normalises and validates rows without writing anything, so a request with
+ * one bad row leaves the Sheet untouched. `pending` carries rows prepared
+ * earlier in the same request: they count for duplicate checks, and a second
+ * copy of the same ID in one request stays one row.
+ */
+function prepareUpserts(tab: TabName, rawRows: unknown, ctx: ApiContext, pending: PreparedRow[]): PreparedRow[] {
+  if (!Array.isArray(rawRows)) fail("BAD_REQUEST", "rows must be a list");
   const existing = ctx.store.read(tab);
-  const saved: Row[] = [];
-  for (const raw of body.rows as Record<string, unknown>[]) {
+  const out: PreparedRow[] = [];
+  for (const raw of rawRows as Record<string, unknown>[]) {
     // The app always sends YYYY-MM-DD; reject anything else before normalising,
     // which would otherwise read "12/11/2026" as M/D.
     const rawDate = raw?.Date;
@@ -92,14 +101,68 @@ function upsert(body: Record<string, unknown>, ctx: ApiContext) {
     }
     const row = normalizeRow(tab, raw ?? {});
     if (!row.ID) row.ID = ctx.newId();
+    const earlier = [...pending, ...out].filter((p) => p.tab === tab);
     const prior = existing.find((r) => r.ID === row.ID);
+    const isUpdate = !!prior || earlier.some((p) => p.row.ID === row.ID);
     if (TIMESTAMPED.includes(tab) && !row.CreatedAt) row.CreatedAt = prior?.CreatedAt ?? ctx.now.toISOString();
-    validate(tab, row, [...existing, ...saved]);
-    if (prior) ctx.store.update(tab, row);
-    else ctx.store.append(tab, [row]);
-    saved.push(row);
+    const others = [...existing.filter((r) => !earlier.some((p) => p.row.ID === r.ID)), ...earlier.map((p) => p.row)];
+    validate(tab, row, others);
+    out.push({ tab, row, isUpdate });
   }
-  return { rows: saved };
+  return out;
+}
+
+function writePrepared(prepared: PreparedRow[], ctx: ApiContext) {
+  for (const p of prepared) {
+    if (p.isUpdate) ctx.store.update(p.tab, p.row);
+    else ctx.store.append(p.tab, [p.row]);
+  }
+}
+
+function upsert(body: Record<string, unknown>, ctx: ApiContext) {
+  const tab = requireTab(body.tab);
+  const prepared = prepareUpserts(tab, body.rows, ctx, []);
+  writePrepared(prepared, ctx);
+  return { rows: prepared.map((p) => p.row) };
+}
+
+const MAX_BATCH_OPS = 50;
+
+/** Several upserts and removes in one request (a meal and its expense). Every row is checked before anything is written. */
+function batch(body: Record<string, unknown>, ctx: ApiContext) {
+  if (!Array.isArray(body.ops)) fail("BAD_REQUEST", "ops must be a list");
+  const ops = body.ops as Record<string, unknown>[];
+  if (ops.length > MAX_BATCH_OPS) fail("BAD_REQUEST", `A batch can have at most ${MAX_BATCH_OPS} changes`);
+
+  type Step = { prepared: PreparedRow[] } | { tab: TabName; ids: string[] };
+  const steps: Step[] = [];
+  const allPrepared: PreparedRow[] = [];
+  for (const op of ops) {
+    const tab = requireTab(op?.tab);
+    if (op.op === "upsert") {
+      const prepared = prepareUpserts(tab, op.rows, ctx, allPrepared);
+      allPrepared.push(...prepared);
+      steps.push({ prepared });
+    } else if (op.op === "remove") {
+      if (!Array.isArray(op.ids)) fail("BAD_REQUEST", "ids must be a list");
+      steps.push({ tab, ids: (op.ids as unknown[]).map(String) });
+    } else {
+      fail("BAD_REQUEST", `Unknown batch op: ${String(op.op)}`);
+    }
+  }
+
+  // Writes happen in the order sent, only after every row passed validation.
+  const saved: { tab: TabName; row: Row }[] = [];
+  let removed = 0;
+  for (const step of steps) {
+    if ("prepared" in step) {
+      writePrepared(step.prepared, ctx);
+      saved.push(...step.prepared.map((p) => ({ tab: p.tab, row: p.row })));
+    } else {
+      removed += ctx.store.remove(step.tab, step.ids);
+    }
+  }
+  return { saved, removed };
 }
 
 function validate(tab: TabName, row: Row, others: Row[]) {

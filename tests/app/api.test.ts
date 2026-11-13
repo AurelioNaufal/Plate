@@ -21,6 +21,22 @@ test("sends a text/plain POST with the token and action (no CORS preflight)", as
   expect(body).toMatchObject({ token: "tok", action: "upsert", tab: "Transactions", rows: [{ ID: "a" }] });
 });
 
+test("batch turns changes into upsert and remove ops in one POST", async () => {
+  const { impl, calls } = fakeFetch({ ok: true, data: { saved: [], removed: 1 } });
+  await createApi(cfg, impl).batch([
+    { tab: "Meals", row: { ID: "m1" } },
+    { tab: "Transactions", removeId: "t1" },
+  ]);
+  expect(calls).toHaveLength(1);
+  expect(JSON.parse(String(calls[0].init.body))).toMatchObject({
+    action: "batch",
+    ops: [
+      { op: "upsert", tab: "Meals", rows: [{ ID: "m1" }] },
+      { op: "remove", tab: "Transactions", ids: ["t1"] },
+    ],
+  });
+});
+
 test("returns data on success", async () => {
   const { impl } = fakeFetch({ ok: true, data: { serverTime: "x" } });
   await expect(createApi(cfg, impl).ping()).resolves.toEqual({ serverTime: "x" });

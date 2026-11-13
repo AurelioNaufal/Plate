@@ -81,6 +81,71 @@ describe("remove", () => {
   });
 });
 
+describe("batch", () => {
+  const meal = (over: Row = {}): Row => ({ ID: "m1", Date: "2026-11-12", Name: "Buffet lunch", Kcal: 650, Protein: 32, InBudget: true, TransactionID: "t1", ...over });
+  const linked = (txOver: Row = {}) => ({
+    token: TOKEN,
+    action: "batch",
+    ops: [
+      { op: "upsert", tab: "Meals", rows: [meal()] },
+      { op: "upsert", tab: "Transactions", rows: [tx({ ID: "t1", MealID: "m1", ...txOver })] },
+    ],
+  });
+
+  test("writes a meal and its expense in one request", () => {
+    const { store, call } = setup();
+    const res = call(linked());
+    expect(res).toMatchObject({ ok: true, data: { removed: 0 } });
+    if (!res.ok) throw new Error();
+    expect((res.data as { saved: { tab: string }[] }).saved.map((s) => s.tab)).toEqual(["Meals", "Transactions"]);
+    expect(store.read("Meals")).toHaveLength(1);
+    expect(store.read("Transactions")[0]).toMatchObject({ ID: "t1", MealID: "m1", CreatedAt: NOW.toISOString() });
+  });
+
+  test("a bad row anywhere in the batch writes nothing", () => {
+    const { store, call } = setup();
+    expect(call(linked({ Amount: 0 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(store.read("Meals")).toHaveLength(0);
+    expect(store.read("Transactions")).toHaveLength(0);
+  });
+
+  test("sending the same batch twice leaves one row in each tab", () => {
+    const { store, call } = setup();
+    call(linked());
+    call(linked());
+    expect(store.read("Meals")).toHaveLength(1);
+    expect(store.read("Transactions")).toHaveLength(1);
+  });
+
+  test("removing a missing ID gives removed 0 without an error", () => {
+    const res = setup().call({ token: TOKEN, action: "batch", ops: [{ op: "remove", tab: "Transactions", ids: ["zz"] }] });
+    expect(res).toEqual({ ok: true, data: { saved: [], removed: 0 } });
+  });
+
+  test("removes and upserts together", () => {
+    const { store, call } = setup({ Meals: [meal()], Transactions: [tx({ ID: "t1" })] });
+    const res = call({
+      token: TOKEN, action: "batch",
+      ops: [
+        { op: "upsert", tab: "Meals", rows: [meal({ InBudget: false, TransactionID: null })] },
+        { op: "remove", tab: "Transactions", ids: ["t1"] },
+      ],
+    });
+    expect(res).toMatchObject({ ok: true, data: { removed: 1 } });
+    expect(store.read("Transactions")).toHaveLength(0);
+    expect(store.read("Meals")[0].InBudget).toBe(false);
+  });
+
+  test("more than 50 ops is BAD_REQUEST", () => {
+    const ops = Array.from({ length: 51 }, () => ({ op: "remove", tab: "Transactions", ids: [] }));
+    expect(setup().call({ token: TOKEN, action: "batch", ops })).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+  });
+
+  test("an unknown op is BAD_REQUEST", () => {
+    expect(setup().call({ token: TOKEN, action: "batch", ops: [{ op: "drop", tab: "Meals" }] })).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+  });
+});
+
 describe("renameCategory", () => {
   const initial = () => ({
     Categories: categories,

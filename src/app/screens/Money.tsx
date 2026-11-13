@@ -3,6 +3,7 @@ import { useData } from "../store";
 import { inPeriod, periodFor, summarize, type Period } from "../../shared/aggregate";
 import { todayTaipei } from "../../shared/dates";
 import { formatNT } from "../../shared/money";
+import { changeId } from "../../shared/changes";
 import { PeriodSwitcher } from "../components/PeriodSwitcher";
 import { CategoryBreakdown } from "../components/CategoryBreakdown";
 import { TransactionList } from "../components/TransactionList";
@@ -24,7 +25,8 @@ export function Money({ today = todayTaipei(), onOpen }: Props) {
   }, [rows.Categories, txs]);
 
   const listed = txs.filter((t) => inPeriod(t, period) && (!category || t.Category === category));
-  const pendingIds = new Set(pending.map((p) => p.id));
+  // Every row in a pending request shows "saving…", not just the first one.
+  const pendingIds = new Set(pending.flatMap((p) => p.changes.map(changeId)));
 
   return (
     <main className="screen">

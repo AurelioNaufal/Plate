@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Api } from "./api";
 import { TAB_NAMES, type Row, type TabName } from "../shared/schema";
+import { applyChanges, changeId, type Change } from "../shared/changes";
 
 type Status = "needs-setup" | "loading" | "ready" | "error";
 type Rows = Record<TabName, Row[]>;
-type PendingOp = { tab: TabName; id: string; op: "save" | "remove"; row?: Row; error?: string };
+/** One request being sent, or one that failed. `id` is its first change's row ID. */
+type PendingOp = { id: string; tab: TabName; changes: Change[]; error?: string };
 
 export type DataState = {
   status: Status;
@@ -13,6 +15,8 @@ export type DataState = {
   pending: PendingOp[];
   save(tab: TabName, row: Row): Promise<void>;
   remove(tab: TabName, id: string): Promise<void>;
+  /** Applies linked changes locally at once and sends them in one request. */
+  apply(changes: Change[]): Promise<void>;
   retry(id: string): Promise<void>;
   reload(): void;
   /** Not optimistic: the server may refuse a duplicate name. */
@@ -63,16 +67,6 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
     };
   }, [api, loadCount]);
 
-  const putLocal = (tab: TabName, row: Row) =>
-    setRows((prev) => {
-      const list = prev[tab];
-      const i = list.findIndex((r) => r.ID === row.ID);
-      const next = i >= 0 ? list.map((r, j) => (j === i ? row : r)) : [...list, row];
-      return { ...prev, [tab]: next };
-    });
-
-  const dropLocal = (tab: TabName, id: string) => setRows((prev) => ({ ...prev, [tab]: prev[tab].filter((r) => r.ID !== id) }));
-
   const settle = (id: string, error?: string) =>
     setPending((prev) => (error ? prev.map((p) => (p.id === id ? { ...p, error } : p)) : prev.filter((p) => p.id !== id)));
 
@@ -81,12 +75,9 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
       if (!api) return;
       setPending((prev) => [...prev.filter((p) => p.id !== op.id), { ...op, error: undefined }]);
       try {
-        if (op.op === "save" && op.row) {
-          const { rows: saved } = await api.upsert(op.tab, [op.row]);
-          if (saved[0]) putLocal(op.tab, saved[0]);
-        } else {
-          await api.remove(op.tab, [op.id]);
-        }
+        const { saved } = await api.batch(op.changes);
+        // The server fills in CreatedAt and the like; keep its copy.
+        if (saved.length) setRows((prev) => applyChanges(prev, saved));
         settle(op.id);
       } catch (e) {
         settle(op.id, e instanceof Error ? e.message : String(e));
@@ -95,22 +86,18 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
     [api],
   );
 
-  const save = useCallback(
-    async (tab: TabName, row: Row) => {
-      const full = { ...row, ID: row.ID ? String(row.ID) : newId() };
-      putLocal(tab, full);
-      await send({ tab, id: String(full.ID), op: "save", row: full });
+  const apply = useCallback(
+    async (changes: Change[]) => {
+      if (changes.length === 0) return;
+      const full = changes.map((c): Change => ("row" in c && !c.row.ID ? { ...c, row: { ...c.row, ID: newId() } } : c));
+      setRows((prev) => applyChanges(prev, full));
+      await send({ id: changeId(full[0]), tab: full[0].tab, changes: full });
     },
     [send],
   );
 
-  const remove = useCallback(
-    async (tab: TabName, id: string) => {
-      dropLocal(tab, id);
-      await send({ tab, id, op: "remove" });
-    },
-    [send],
-  );
+  const save = useCallback((tab: TabName, row: Row) => apply([{ tab, row }]), [apply]);
+  const remove = useCallback((tab: TabName, id: string) => apply([{ tab, removeId: id }]), [apply]);
 
   const retry = useCallback(
     async (id: string) => {
@@ -147,7 +134,7 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
   );
 
   return (
-    <DataContext.Provider value={{ status, loadError, rows, pending, save, remove, retry, reload, renameCategory }}>{children}</DataContext.Provider>
+    <DataContext.Provider value={{ status, loadError, rows, pending, save, remove, apply, retry, reload, renameCategory }}>{children}</DataContext.Provider>
   );
 }
 

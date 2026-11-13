@@ -1,4 +1,5 @@
 import type { Row, TabName } from "../shared/schema";
+import type { Change } from "../shared/changes";
 
 export type ApiConfig = { url: string; token: string };
 
@@ -40,5 +41,10 @@ export function createApi(cfg: ApiConfig, fetchImpl: typeof fetch = (...args) =>
     upsert: (tab: TabName, rows: Row[]) => call<{ rows: Row[] }>("upsert", { tab, rows }),
     remove: (tab: TabName, ids: string[]) => call<{ removed: number }>("remove", { tab, ids }),
     renameCategory: (id: string, name: string) => call<{ updatedTransactions: number }>("renameCategory", { id, name }),
+    /** Several changes in one request; the server checks them all before writing any. */
+    batch: (changes: Change[]) =>
+      call<{ saved: { tab: TabName; row: Row }[]; removed: number }>("batch", {
+        ops: changes.map((c) => ("row" in c ? { op: "upsert", tab: c.tab, rows: [c.row] } : { op: "remove", tab: c.tab, ids: [c.removeId] })),
+      }),
   };
 }
