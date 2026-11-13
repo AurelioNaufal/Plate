@@ -66,3 +66,22 @@ Every later `git push` to `main` updates the app automatically.
 ## After code changes
 
 `npm run push:gas`, then in the editor **Deploy → Manage deployments → ✏ → Version: New version → Deploy**. The URL stays the same.
+
+## Plan 2 update — meals, recurring charges, estimates
+
+Do these once, in order, in the Apps Script editor (the project Claude pushed the new code to). Your Web app URL and token stay the same.
+
+1. **Upload the new version:** **Deploy → Manage deployments → ✏ → Version: New version → Deploy**.
+2. **Run `setup`** (pick it in the function menu at the top, then **Run**). If Google asks for permission, allow it.
+   *You should see:* in the Sheet, the **QuickAdd**, **SavedFoods** and **Recurring** tabs have starter rows (rice, chicken, …; Gym and Laundry every Sunday), and the Recurring tab has a new **ChargedThrough** column. In the editor, **Triggers** (the alarm-clock icon) lists one daily trigger for `runRecurring`.
+   Tabs that already had rows are left alone, so running setup again never brings back something you deleted.
+3. **Load your estimates:** in the Sheet, **File → Import → Upload** `private/food-estimates.csv` (in the Plate folder on your computer) → **Insert new sheet(s)** → **Import data**.
+   *You should see:* a new tab **food-estimates** with one row per food you've bought: how many times, the usual price, and guessed kcal and protein. Change any number you know better, and clear the ones you'd rather not track. A ✓ (TRUE) in **SavedFood** turns that food into a one-tap saved food.
+4. **Run `importFoodEstimates`.**
+   *You should see:* the log says how many Food expenses were linked. In Plate, past meals on Money show protein and kcal, and your money totals don't change.
+5. **After any later `runMigration`, run `importFoodEstimates` again.** It re-links the meals and removes the stale ones.
+6. **From Sunday 15 Nov, stop typing Gym and Laundry yourself**, in the app or the Sheet. Plate adds them every Sunday just after midnight, and also whenever the app opens. Typing them too would count them twice.
+
+**Adding a subscription** (Claude, YouTube Premium, …): in Plate, **Body → Settings → Recurring charges → Add recurring charge**. Choose **Monthly**, set the day your card is billed, and set the start date to your **next** billing day so past months aren't added. You can also type a row into the Recurring tab. Leave ID blank, use `monthly` or `weekly`, and give Weekday as 0 = Sunday … 6 = Saturday or MonthDay as 1–31.
+
+**Moving to your real Sheet later:** after `useRealSheet` and `runMigration`, repeat steps 2–4 there. `useRealSheet` already runs `setup` for you.
