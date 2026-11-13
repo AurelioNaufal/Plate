@@ -6,6 +6,8 @@ export interface SheetStore {
   append(tab: TabName, rows: Row[]): void;
   /** Replaces the row with the same ID. Returns false if no such row. */
   update(tab: TabName, row: Row): boolean;
+  /** Replaces every row whose ID matches, in one read and one write. Returns how many matched. */
+  updateMany(tab: TabName, rows: Row[]): number;
   /** Returns how many of the IDs existed and were removed. */
   remove(tab: TabName, ids: string[]): number;
   /** Gives rows typed into the Sheet by hand (blank ID) a new ID. */
@@ -95,6 +97,10 @@ export class MemoryStore implements SheetStore {
     if (i < 0) return false;
     rows[i] = { ...row };
     return true;
+  }
+
+  updateMany(tab: TabName, rows: Row[]): number {
+    return rows.filter((r) => this.update(tab, r)).length;
   }
 
   remove(tab: TabName, ids: string[]): number {

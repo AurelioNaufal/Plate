@@ -96,6 +96,27 @@ export class GasStore implements SheetStore {
     return true;
   }
 
+  updateMany(tab: TabName, rows: Row[]): number {
+    if (rows.length === 0) return 0;
+    const sh = this.sheet(tab);
+    const values = sh.getDataRange().getValues();
+    if (values.length < 2) return 0;
+    const headers = values[0].map((h) => String(h).trim());
+    const idCol = headers.indexOf("ID");
+    if (idCol < 0) return 0;
+    const byId = new Map(rows.map((r) => [String(r.ID), r]));
+    let matched = 0;
+    // Same overlay rule as update(): only the columns a row carries change.
+    const next = values.slice(1).map((line) => {
+      const row = byId.get(String(line[idCol]).trim());
+      if (!row) return line;
+      matched++;
+      return headers.map((h, i) => (h in row ? (row[h] ?? "") : line[i]));
+    });
+    if (matched) sh.getRange(2, 1, next.length, headers.length).setValues(next);
+    return matched;
+  }
+
   remove(tab: TabName, ids: string[]): number {
     const sh = this.sheet(tab);
     const index = this.rowIndex(sh, this.headers(sh));

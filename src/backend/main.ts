@@ -4,6 +4,8 @@ import { handleRequest, type ApiResponse } from "./api";
 import { GasStore } from "./gasStore";
 import { setupSpreadsheet } from "./setup";
 import { migrate } from "./migrationRunner";
+import { runRecurringCharges } from "./recurring";
+import { todayTaipei } from "../shared/dates";
 
 const OLD_SHEET_ID = "1QB2MOJrNueV3q0d5dXNGaJeT7T5a0eJWGQlox2MbSW0";
 const props = () => PropertiesService.getScriptProperties();
@@ -76,6 +78,18 @@ export function generateToken() {
 export function runMigration() {
   const oldId = props().getProperty("OLD_SPREADSHEET_ID") ?? OLD_SHEET_ID;
   migrate(openTarget(), oldId, new Date(), newId);
+}
+
+/** Daily trigger (set up by setup()): adds the recurring charges due today. */
+export function runRecurring() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const added = runRecurringCharges(new GasStore(openTarget()), todayTaipei(), new Date());
+    Logger.log("Recurring: added %s charge(s)", added);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 export function useRealSheet() {

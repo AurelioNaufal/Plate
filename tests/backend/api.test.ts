@@ -167,6 +167,55 @@ describe("renameCategory", () => {
   });
 });
 
+describe("recurring", () => {
+  const gym: Row = { ID: "r1", Name: "Gym", Amount: 40, Category: "Health", Frequency: "weekly", Weekday: 0, Active: true, StartDate: "2026-11-15" };
+  const sundayNoon = new Date("2026-11-15T04:00:00Z");
+
+  test("list adds the charges due today before reading Transactions", () => {
+    const store = new MemoryStore({ Recurring: [gym], Transactions: [] });
+    const res = handleRequest(JSON.stringify({ token: TOKEN, action: "list", tabs: ["Transactions", "Recurring"] }), {
+      store, token: TOKEN, now: sundayNoon, newId: () => "x",
+    });
+    if (!res.ok) throw new Error("list failed");
+    const data = res.data as Record<string, Row[]>;
+    expect(data.Transactions).toEqual([expect.objectContaining({ ID: "rec_r1_2026-11-15", Source: "recurring", Amount: 40 })]);
+    expect(data.Recurring[0].ChargedThrough).toBe("2026-11-15");
+  });
+
+  test("list without Transactions does not charge", () => {
+    const store = new MemoryStore({ Recurring: [gym], Transactions: [] });
+    handleRequest(JSON.stringify({ token: TOKEN, action: "list", tabs: ["Recurring"] }), { store, token: TOKEN, now: sundayNoon, newId: () => "x" });
+    expect(store.read("Transactions")).toEqual([]);
+  });
+
+  test.each([
+    ["Weekday 7", { Weekday: 7 }],
+    ["fractional Weekday", { Weekday: 1.5 }],
+    ["no Name", { Name: " " }],
+    ["zero Amount", { Amount: 0 }],
+    ["unknown Frequency", { Frequency: "daily" }],
+    ["monthly without MonthDay", { Frequency: "monthly", MonthDay: null }],
+    ["MonthDay 32", { Frequency: "monthly", MonthDay: 32 }],
+    ["bad StartDate", { StartDate: "soon" }],
+  ])("rejects a Recurring row with %s", (_label, over) => {
+    const res = setup().call({ token: TOKEN, action: "upsert", tab: "Recurring", rows: [{ ...gym, ...(over as Row) }] });
+    expect(res).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+  });
+
+  test("a valid monthly row is accepted", () => {
+    const res = setup().call({ token: TOKEN, action: "upsert", tab: "Recurring", rows: [{ ...gym, Frequency: "monthly", Weekday: null, MonthDay: 31 }] });
+    expect(res.ok).toBe(true);
+  });
+
+  test("saving an item from an old copy never moves ChargedThrough back", () => {
+    const { store, call } = setup({ Recurring: [{ ...gym, ChargedThrough: "2026-11-29" }] });
+    call({ token: TOKEN, action: "upsert", tab: "Recurring", rows: [{ ...gym, Active: false, ChargedThrough: "2026-11-15" }] });
+    expect(store.read("Recurring")[0]).toMatchObject({ Active: false, ChargedThrough: "2026-11-29" });
+    call({ token: TOKEN, action: "upsert", tab: "Recurring", rows: [{ ...gym, ChargedThrough: null }] });
+    expect(store.read("Recurring")[0].ChargedThrough).toBe("2026-11-29");
+  });
+});
+
 describe("list", () => {
   test("hand-typed rows get a stable ID and Source manual", () => {
     const { call } = setup({ Transactions: [tx({ ID: null, Source: null })] });

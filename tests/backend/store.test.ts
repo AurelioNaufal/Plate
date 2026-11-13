@@ -44,6 +44,12 @@ test("valuesForRow follows the given header order", () => {
   expect(valuesForRow(["Category", "ID"], { ID: "x", Category: "Food" })).toEqual(["Food", "x"]);
 });
 
+test("MemoryStore.updateMany updates the rows it finds by ID and returns how many", () => {
+  const store = new MemoryStore({ Recurring: [{ ID: "a", Name: "A" }, { ID: "b", Name: "B" }, { ID: "c", Name: "C" }] });
+  expect(store.updateMany("Recurring", [{ ID: "a", Name: "A2" }, { ID: "c", Name: "C2" }, { ID: "zz", Name: "Z" }])).toBe(2);
+  expect(store.read("Recurring").map((r) => r.Name)).toEqual(["A2", "B", "C2"]);
+});
+
 describe("MemoryStore", () => {
   test("append then read returns the rows", () => {
     const s = new MemoryStore();

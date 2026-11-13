@@ -16,7 +16,7 @@ export const TABS = {
   Meals: { columns: [["ID", s], ["Date", d], ["Time", s], ["Name", s], ["Kcal", n], ["Protein", n], ["InBudget", b], ["TransactionID", s], ["Items", s], ["Estimated", b], ["CreatedAt", s]] },
   SavedFoods: { columns: [["ID", s], ["Name", s], ["Kcal", n], ["Protein", n], ["Price", n], ["SortOrder", n]] },
   QuickAdd: { columns: [["ID", s], ["Name", s], ["Kcal", n], ["Protein", n], ["SortOrder", n]] },
-  Recurring: { columns: [["ID", s], ["Name", s], ["Amount", n], ["Category", s], ["Frequency", s], ["Weekday", n], ["MonthDay", n], ["Active", b], ["StartDate", d], ["ActiveSince", d]] },
+  Recurring: { columns: [["ID", s], ["Name", s], ["Amount", n], ["Category", s], ["Frequency", s], ["Weekday", n], ["MonthDay", n], ["Active", b], ["StartDate", d], ["ActiveSince", d], ["ChargedThrough", d]] },
   Budgets: { columns: [["ID", s], ["Category", s], ["MonthlyLimit", n]] },
   Exercises: { columns: [["ID", s], ["Name", s], ["MuscleGroup", s], ["SortOrder", n]] },
   Routines: { columns: [["ID", s], ["Name", s], ["Weekdays", s], ["ExerciseIDs", s]] },

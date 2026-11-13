@@ -6,3 +6,4 @@ function setup() { App.setup(); }
 function generateToken() { App.generateToken(); }
 function useRealSheet() { App.useRealSheet(); }
 function runMigration() { App.runMigration(); }
+function runRecurring() { App.runRecurring(); }
