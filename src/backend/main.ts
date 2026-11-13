@@ -5,6 +5,7 @@ import { GasStore } from "./gasStore";
 import { setupSpreadsheet } from "./setup";
 import { migrate } from "./migrationRunner";
 import { runRecurringCharges } from "./recurring";
+import { parseEstimateTab, planFoodImport } from "./foodEstimates";
 import { todayTaipei } from "../shared/dates";
 
 const OLD_SHEET_ID = "1QB2MOJrNueV3q0d5dXNGaJeT7T5a0eJWGQlox2MbSW0";
@@ -96,6 +97,41 @@ export function runRecurring() {
   try {
     const added = runRecurringCharges(new GasStore(openTarget()), todayTaipei(), new Date());
     Logger.log("Recurring: added %s charge(s)", added);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * One-time: reads the FoodEstimates tab (File → Import of private/food-estimates.csv)
+ * and gives every past Food expense an estimated meal. Safe to run again.
+ */
+export function importFoodEstimates() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const ss = openTarget();
+    const tab = ss.getSheetByName("FoodEstimates") ?? ss.getSheetByName("food-estimates");
+    if (!tab) throw new Error('No "FoodEstimates" tab. Use File → Import → Upload food-estimates.csv → Insert new sheet(s).');
+    const store = new GasStore(ss);
+    const plan = planFoodImport({
+      transactions: store.read("Transactions"),
+      meals: store.read("Meals"),
+      savedFoods: store.read("SavedFoods"),
+      estimates: parseEstimateTab(tab.getDataRange().getValues()),
+      newId,
+      now: new Date(),
+    });
+    // Links first: if this stops halfway, a re-run sees those expenses as
+    // unlinked (their meals are missing) and simply links them again.
+    store.updateMany("Transactions", plan.txUpdates);
+    store.remove("Meals", plan.orphanMealIds);
+    store.append("Meals", plan.newMeals);
+    store.append("SavedFoods", plan.newSavedFoods);
+    Logger.log(
+      "Linked %s Food expenses (%s with estimates, %s not tracked). Removed %s stale meals. Added %s saved foods.",
+      plan.stats.linked, plan.stats.withNutrition, plan.stats.notTracked, plan.orphanMealIds.length, plan.newSavedFoods.length,
+    );
   } finally {
     lock.releaseLock();
   }
