@@ -1,9 +1,44 @@
-import { TABS, TAB_NAMES, DEFAULT_CATEGORIES, columnNames, type Row } from "../shared/schema";
+import { TABS, TAB_NAMES, DEFAULT_CATEGORIES, columnNames, type Row, type TabName } from "../shared/schema";
 import { valuesForRow } from "./store";
 
 export function seedCategories(newId: () => string): Row[] {
   const make = (type: string) => (name: string, i: number): Row => ({ ID: newId(), Name: name, Type: type, Hidden: false, SortOrder: i + 1 });
   return [...DEFAULT_CATEGORIES.expense.map(make("expense")), ...DEFAULT_CATEGORIES.income.map(make("income"))];
+}
+
+// Starter rows, written once into empty tabs. The owner edits them in the app.
+const QUICK_ADD: [string, number, number][] = [
+  ["Rice (scoop)", 200, 4],
+  ["Chicken breast", 180, 30],
+  ["Chicken katsu", 300, 22],
+  ["Dori fish (fried)", 200, 14],
+  ["Egg omelet", 110, 7],
+  ["Tofu", 60, 5],
+  ["Potato wedges", 200, 3],
+  ["Hash brown", 145, 1],
+  ["Veggies", 100, 2],
+];
+
+const SAVED_FOODS: [string, number, number, number][] = [
+  ["Combo Roti + Milk Fami", 49, 450, 14],
+  ["7-11 Tuna Onigiri", 35, 200, 6],
+  ["McD McChicken Meal", 151, 800, 20],
+];
+
+export function seedQuickAdd(newId: () => string): Row[] {
+  return QUICK_ADD.map(([Name, Kcal, Protein], i) => ({ ID: newId(), Name, Kcal, Protein, SortOrder: i + 1 }));
+}
+
+export function seedSavedFoods(newId: () => string): Row[] {
+  return SAVED_FOODS.map(([Name, Price, Kcal, Protein], i) => ({ ID: newId(), Name, Kcal, Protein, Price, SortOrder: i + 1 }));
+}
+
+export function seedRecurring(newId: () => string): Row[] {
+  const weeklySunday = (Name: string, Amount: number, Category: string): Row => ({
+    ID: newId(), Name, Amount, Category, Frequency: "weekly", Weekday: 0, MonthDay: null,
+    Active: true, StartDate: "2026-11-15", ActiveSince: null, ChargedThrough: null,
+  });
+  return [weeklySunday("Gym", 40, "Health"), weeklySunday("Laundry", 20, "Utilities")];
 }
 
 // Transactions columns: A ID, B Type, C Date, D Amount, E Description, F Category.
@@ -72,12 +107,22 @@ export function setupSpreadsheet(ss: GoogleAppsScript.Spreadsheet.Spreadsheet, n
     }
   }
 
-  const categories = ss.getSheetByName("Categories")!;
-  if (categories.getLastRow() < 2) {
-    const headers = headerRow(categories);
-    const rows = seedCategories(newId);
-    categories.getRange(2, 1, rows.length, headers.length).setValues(rows.map((r) => valuesForRow(headers, r)));
+  // Each seed goes in only while its tab has no data rows, so re-running
+  // setup never brings back a row the owner deleted.
+  const seeds: [TabName, (id: () => string) => Row[]][] = [
+    ["Categories", seedCategories],
+    ["QuickAdd", seedQuickAdd],
+    ["SavedFoods", seedSavedFoods],
+    ["Recurring", seedRecurring],
+  ];
+  for (const [tab, seed] of seeds) {
+    const sh = ss.getSheetByName(tab)!;
+    if (sh.getLastRow() >= 2) continue;
+    const headers = headerRow(sh);
+    const rows = seed(newId);
+    sh.getRange(2, 1, rows.length, headers.length).setValues(rows.map((r) => valuesForRow(headers, r)));
   }
+  const categories = ss.getSheetByName("Categories")!;
 
   const tx = ss.getSheetByName("Transactions")!;
   const txHeaders = headerRow(tx);

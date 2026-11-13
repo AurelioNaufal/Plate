@@ -1,4 +1,33 @@
-import { seedCategories, summaryFormulas } from "../../src/backend/setup";
+import { seedCategories, seedQuickAdd, seedSavedFoods, seedRecurring, summaryFormulas } from "../../src/backend/setup";
+
+describe("starter rows", () => {
+  let n = 0;
+  const newId = () => `s${++n}`;
+
+  test("seedQuickAdd has the 9 buttons in order", () => {
+    const rows = seedQuickAdd(newId);
+    expect(rows).toHaveLength(9);
+    expect(rows[0]).toMatchObject({ Name: "Rice (scoop)", Kcal: 200, Protein: 4, SortOrder: 1 });
+    expect(rows[8]).toMatchObject({ Name: "Veggies", Kcal: 100, Protein: 2, SortOrder: 9 });
+    expect(rows.map((r) => r.SortOrder)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(rows.every((r) => typeof r.ID === "string" && r.ID)).toBe(true);
+  });
+
+  test("seedSavedFoods has the 3 usual foods", () => {
+    const rows = seedSavedFoods(newId);
+    expect(rows).toHaveLength(3);
+    expect(rows).toContainEqual(expect.objectContaining({ Name: "Combo Roti + Milk Fami", Price: 49, Kcal: 450, Protein: 14, SortOrder: 1 }));
+    expect(rows).toContainEqual(expect.objectContaining({ Name: "McD McChicken Meal", Price: 151, Kcal: 800, Protein: 20 }));
+  });
+
+  test("seedRecurring has gym and laundry every Sunday from 15 Nov", () => {
+    const rows = seedRecurring(newId);
+    expect(rows).toHaveLength(2);
+    const base = { Frequency: "weekly", Weekday: 0, MonthDay: null, StartDate: "2026-11-15", Active: true, ActiveSince: null, ChargedThrough: null };
+    expect(rows[0]).toMatchObject({ Name: "Gym", Amount: 40, Category: "Health", ...base });
+    expect(rows[1]).toMatchObject({ Name: "Laundry", Amount: 20, Category: "Utilities", ...base });
+  });
+});
 
 describe("seedCategories", () => {
   let n = 0;

@@ -66,7 +66,16 @@ export function createSheets() {
 export function setup() {
   const ss = openTarget();
   setupSpreadsheet(ss, newId);
+  ensureDailyRecurringTrigger();
   Logger.log("Set up %s (%s)", ss.getName(), ss.getUrl());
+}
+
+/** Exactly one trigger: runRecurring every day around midnight (the project's timezone is Asia/Taipei). */
+function ensureDailyRecurringTrigger() {
+  const exists = ScriptApp.getProjectTriggers().some((t) => t.getHandlerFunction() === "runRecurring");
+  if (exists) return;
+  ScriptApp.newTrigger("runRecurring").timeBased().everyDays(1).atHour(0).create();
+  Logger.log("Added a daily trigger for runRecurring");
 }
 
 export function generateToken() {
