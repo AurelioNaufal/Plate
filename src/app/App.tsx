@@ -9,8 +9,12 @@ import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
 import { Targets } from "./screens/Targets";
+import { SavedFoods } from "./screens/SavedFoods";
+import { QuickAdd } from "./screens/QuickAdd";
+import { Recurring } from "./screens/Recurring";
 
-type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" };
+type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
+  | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" };
 
 export function App() {
   const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
@@ -69,6 +73,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
         <Today
           onOpenMeal={(id) => setScreen({ name: "new", editMealId: id })}
           onOpenTargets={() => setScreen({ name: "targets" })}
+          onOpenRecurring={() => setScreen({ name: "recurring", from: "today" })}
         />
       )}
       {screen.name === "money" && <Money onOpen={(id) => setScreen({ name: "new", editId: id })} />}
@@ -93,11 +98,17 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onSave={(c) => { onSaveConfig(c); setScreen({ name: "today" }); }}
           links={[
             { label: "Categories", onOpen: () => setScreen({ name: "categories" }) },
+            { label: "Saved foods", onOpen: () => setScreen({ name: "savedFoods" }) },
+            { label: "Quick-add buttons", onOpen: () => setScreen({ name: "quickAdd" }) },
+            { label: "Recurring charges", onOpen: () => setScreen({ name: "recurring", from: "settings" }) },
             { label: "Targets", onOpen: () => setScreen({ name: "targets" }) },
           ]}
         />
       )}
       {screen.name === "targets" && <Targets onBack={() => setScreen({ name: "settings" })} />}
+      {screen.name === "savedFoods" && <SavedFoods onBack={() => setScreen({ name: "settings" })} />}
+      {screen.name === "quickAdd" && <QuickAdd onBack={() => setScreen({ name: "settings" })} />}
+      {screen.name === "recurring" && <Recurring onBack={() => setScreen(screen.from === "today" ? { name: "today" } : { name: "settings" })} />}
       {screen.name === "new" && (
         <NewEntry
           key={screen.editId ?? screen.editMealId ?? "new"}
