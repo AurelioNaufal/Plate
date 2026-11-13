@@ -8,8 +8,9 @@ import { Money } from "./screens/Money";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
+import { Targets } from "./screens/Targets";
 
-type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" };
+type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" };
 
 export function App() {
   const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
@@ -64,7 +65,12 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
         </div>
       )}
 
-      {screen.name === "today" && <Today />}
+      {screen.name === "today" && (
+        <Today
+          onOpenMeal={(id) => setScreen({ name: "new", editMealId: id })}
+          onOpenTargets={() => setScreen({ name: "targets" })}
+        />
+      )}
       {screen.name === "money" && <Money onOpen={(id) => setScreen({ name: "new", editId: id })} />}
       {screen.name === "gym" && <Placeholder title="Gym" />}
       {screen.name === "body" && (
@@ -81,7 +87,17 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           </section>
         </main>
       )}
-      {screen.name === "settings" && <Settings config={config} onSave={(c) => { onSaveConfig(c); setScreen({ name: "today" }); }} onOpenCategories={() => setScreen({ name: "categories" })} />}
+      {screen.name === "settings" && (
+        <Settings
+          config={config}
+          onSave={(c) => { onSaveConfig(c); setScreen({ name: "today" }); }}
+          links={[
+            { label: "Categories", onOpen: () => setScreen({ name: "categories" }) },
+            { label: "Targets", onOpen: () => setScreen({ name: "targets" }) },
+          ]}
+        />
+      )}
+      {screen.name === "targets" && <Targets onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "new" && (
         <NewEntry
           key={screen.editId ?? screen.editMealId ?? "new"}

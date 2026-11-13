@@ -1,4 +1,14 @@
-import { planMealSave, planMealDelete, dayNutrition, parseNutritionInput, itemsLabel, foodCategory, type MealInput } from "../../src/shared/meals";
+import { planMealSave, planMealDelete, dayNutrition, parseNutritionInput, itemsLabel, foodCategory, getSetting, targetsFrom, type MealInput } from "../../src/shared/meals";
+
+test("targetsFrom defaults protein to 120 and leaves calories blank", () => {
+  expect(targetsFrom([])).toEqual({ protein: 120, kcal: null });
+  expect(targetsFrom([{ ID: "proteinTarget", Value: "130" }, { ID: "kcalTarget", Value: "2200" }])).toEqual({ protein: 130, kcal: 2200 });
+  // Unreadable or zero values fall back instead of breaking the rings.
+  expect(targetsFrom([{ ID: "proteinTarget", Value: "lots" }, { ID: "kcalTarget", Value: "0" }])).toEqual({ protein: 120, kcal: null });
+  expect(getSetting([{ ID: "x", Value: 5 }], "x")).toBe("5");
+  expect(getSetting([{ ID: "x", Value: null }], "x")).toBeNull();
+  expect(getSetting([], "x")).toBeNull();
+});
 import { applyChanges, changeId, type Change } from "../../src/shared/changes";
 import type { Row, TabName } from "../../src/shared/schema";
 import { TAB_NAMES } from "../../src/shared/schema";

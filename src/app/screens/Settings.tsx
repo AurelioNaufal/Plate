@@ -4,10 +4,11 @@ import { createApi, type ApiConfig } from "../api";
 type Props = {
   config: ApiConfig | null;
   onSave(cfg: ApiConfig): void;
-  onOpenCategories?(): void;
+  /** Links to the screens under Settings; none while the app isn't connected yet. */
+  links?: { label: string; onOpen(): void }[];
 };
 
-export function Settings({ config, onSave, onOpenCategories }: Props) {
+export function Settings({ config, onSave, links = [] }: Props) {
   const [url, setUrl] = useState(config?.url ?? "");
   const [token, setToken] = useState(config?.token ?? "");
   const [check, setCheck] = useState<{ state: "idle" | "checking" | "ok" | "error"; message?: string }>({ state: "idle" });
@@ -58,12 +59,14 @@ export function Settings({ config, onSave, onOpenCategories }: Props) {
         </button>
       </section>
 
-      {onOpenCategories && (
-        <section className="card">
-          <button className="list-row" onClick={onOpenCategories}>
-            <span>Categories</span>
-            <span className="muted">›</span>
-          </button>
+      {links.length > 0 && (
+        <section className="card" aria-label="Manage">
+          {links.map((l) => (
+            <button key={l.label} className="list-row" onClick={l.onOpen}>
+              <span>{l.label}</span>
+              <span className="muted">›</span>
+            </button>
+          ))}
         </section>
       )}
     </main>

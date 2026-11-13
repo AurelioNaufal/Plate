@@ -133,6 +133,24 @@ export function dayNutrition(meals: Row[], date: string) {
   return { kcal, protein: roundProtein(protein), kcalMeals, proteinMeals, meals: day };
 }
 
+/** A Settings row's value as text, or null when missing or blank. */
+export function getSetting(rows: Row[], id: string): string | null {
+  const v = rows.find((r) => r.ID === id)?.Value;
+  if (v === null || v === undefined || String(v).trim() === "") return null;
+  return String(v).trim();
+}
+
+export const DEFAULT_PROTEIN_TARGET = 120;
+
+/** Daily targets. Protein defaults to 120 g; calories stay blank until set. Unreadable or non-positive values are ignored. */
+export function targetsFrom(settings: Row[]): { protein: number; kcal: number | null } {
+  const positive = (id: string) => {
+    const p = parseNutritionInput(getSetting(settings, id) ?? "");
+    return p.ok && p.value !== null && p.value > 0 ? p.value : null;
+  };
+  return { protein: positive("proteinTarget") ?? DEFAULT_PROTEIN_TARGET, kcal: positive("kcalTarget") };
+}
+
 export function itemsLabel(counts: { name: string; count: number }[]): string {
   return counts
     .filter((c) => c.count > 0)
