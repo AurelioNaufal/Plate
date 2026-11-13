@@ -1,0 +1,106 @@
+import { useMemo, useState } from "react";
+import { createApi, type ApiConfig } from "./api";
+import { loadConfig, saveConfig, clearConfig } from "./config";
+import { DataProvider, useData } from "./store";
+import { Settings } from "./screens/Settings";
+import { Today } from "./screens/Today";
+import { Money } from "./screens/Money";
+import { BottomNav, type Tab } from "./components/BottomNav";
+import { NewEntry } from "./screens/NewEntry";
+import { Categories } from "./screens/Categories";
+
+type Screen = { name: Tab } | { name: "new"; editId?: string } | { name: "settings" } | { name: "categories" };
+
+export function App() {
+  const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
+  const api = useMemo(() => (config ? createApi(config) : null), [config]);
+
+  const save = (cfg: ApiConfig) => {
+    saveConfig(cfg);
+    setConfig(cfg);
+  };
+  const forget = () => {
+    clearConfig();
+    setConfig(null);
+  };
+
+  return (
+    <DataProvider api={api}>
+      <Shell config={config} onSaveConfig={save} onClearConfig={forget} />
+    </DataProvider>
+  );
+}
+
+type ShellProps = { config: ApiConfig | null; onSaveConfig(cfg: ApiConfig): void; onClearConfig(): void };
+
+function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
+  const { status, loadError, reload, pending, retry } = useData();
+  const [screen, setScreen] = useState<Screen>({ name: "today" });
+
+  if (status === "needs-setup") return <Settings config={config} onSave={onSaveConfig} />;
+  if (status === "loading") return <main className="center muted">Loading your data…</main>;
+  if (status === "error")
+    return (
+      <main className="center">
+        <p>Couldn't load your data: {loadError}</p>
+        <button className="btn btn-primary" onClick={reload}>Try again</button>
+        <button className="btn-link" onClick={onClearConfig}>Change connection</button>
+      </main>
+    );
+
+  const failed = pending.filter((p) => p.error);
+  const tab = ["today", "money", "gym", "body"].includes(screen.name) ? (screen.name as Tab) : null;
+
+  return (
+    <>
+      {failed.length > 0 && (
+        <div style={{ maxWidth: 560, margin: "12px auto 0", padding: "0 16px" }}>
+          <div className="banner" role="alert">
+            <span>
+              {failed.length === 1 ? "1 change" : `${failed.length} changes`} didn't save: {failed[0].error}
+            </span>
+            <button className="btn-link" onClick={() => failed.forEach((p) => retry(p.id))}>Retry</button>
+          </div>
+        </div>
+      )}
+
+      {screen.name === "today" && <Today />}
+      {screen.name === "money" && <Money onOpen={(id) => setScreen({ name: "new", editId: id })} />}
+      {screen.name === "gym" && <Placeholder title="Gym" />}
+      {screen.name === "body" && (
+        <main className="screen">
+          <header className="screen-header"><h1>Body</h1></header>
+          <section className="card">
+            <p className="muted small" style={{ margin: 0 }}>Weight, targets and body stats arrive in a later update.</p>
+          </section>
+          <section className="card">
+            <button className="list-row" onClick={() => setScreen({ name: "settings" })}>
+              <span>Settings</span>
+              <span className="muted">›</span>
+            </button>
+          </section>
+        </main>
+      )}
+      {screen.name === "settings" && <Settings config={config} onSave={(c) => { onSaveConfig(c); setScreen({ name: "today" }); }} onOpenCategories={() => setScreen({ name: "categories" })} />}
+      {screen.name === "new" && (
+        <NewEntry key={screen.editId ?? "new"} editId={screen.editId} onDone={() => setScreen({ name: screen.editId ? "money" : "today" })} />
+      )}
+      {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
+
+      {screen.name !== "new" && (
+        <BottomNav current={tab} onTab={(t) => setScreen({ name: t })} onAdd={() => setScreen({ name: "new" })} />
+      )}
+    </>
+  );
+}
+
+function Placeholder({ title }: { title: string }) {
+  return (
+    <main className="screen">
+      <header className="screen-header"><h1>{title}</h1></header>
+      <section className="card">
+        <p className="muted small" style={{ margin: 0 }}>Coming in a later update.</p>
+      </section>
+    </main>
+  );
+}

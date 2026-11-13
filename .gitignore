@@ -1,0 +1,11 @@
+node_modules/
+dist/
+gas/bundle.js
+.clasp.json
+.superpowers/
+.env*
+
+# Personal: never published
+private/
+docs/superpowers/
+Personal Finance App Plan & Decisions.md
