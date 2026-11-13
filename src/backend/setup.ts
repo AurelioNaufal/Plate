@@ -1,5 +1,6 @@
 import { TABS, TAB_NAMES, DEFAULT_CATEGORIES, columnNames, type Row, type TabName } from "../shared/schema";
 import { valuesForRow } from "./store";
+import { todayTaipei } from "../shared/dates";
 
 export function seedCategories(newId: () => string): Row[] {
   const make = (type: string) => (name: string, i: number): Row => ({ ID: newId(), Name: name, Type: type, Hidden: false, SortOrder: i + 1 });
@@ -40,6 +41,44 @@ export function seedRecurring(newId: () => string): Row[] {
   });
   return [weeklySunday("Gym", 40, "Health"), weeklySunday("Laundry", 20, "Utilities")];
 }
+
+const SEEDS: [TabName, (id: () => string) => Row[]][] = [
+  ["Categories", seedCategories],
+  ["QuickAdd", seedQuickAdd],
+  ["SavedFoods", seedSavedFoods],
+  ["Recurring", seedRecurring],
+];
+
+/**
+ * Which starter rows to write. Each tab is seeded at most once, ever: a
+ * `seeded:<Tab>` row in Settings records it, so a tab the owner emptied stays
+ * empty when setup runs again (re-seeded recurring items would back-charge).
+ * A tab that already has rows just gets its marker.
+ */
+export function planSeeds(
+  tabs: { tab: TabName; hasRows: boolean }[],
+  settings: Row[],
+  today: string,
+  newId: () => string,
+): { writes: { tab: TabName; rows: Row[] }[]; markers: Row[] } {
+  const done = new Set(settings.map((r) => String(r.ID)));
+  const writes: { tab: TabName; rows: Row[] }[] = [];
+  const markers: Row[] = [];
+  for (const { tab, hasRows } of tabs) {
+    const seed = SEEDS.find(([t]) => t === tab)?.[1];
+    const marker = `seeded:${tab}`;
+    if (!seed || done.has(marker)) continue;
+    markers.push({ ID: marker, Value: today });
+    if (hasRows) continue;
+    let rows = seed(newId);
+    // Never start a starter charge in the past, which would back-fill it.
+    if (tab === "Recurring") rows = rows.map((r) => ({ ...r, StartDate: String(r.StartDate) > today ? r.StartDate : today }));
+    writes.push({ tab, rows });
+  }
+  return { writes, markers };
+}
+
+export const SEEDED_TABS: TabName[] = SEEDS.map(([t]) => t);
 
 // Transactions columns: A ID, B Type, C Date, D Amount, E Description, F Category.
 // Categories columns: A ID, B Name, C Type, D Hidden.
@@ -107,20 +146,26 @@ export function setupSpreadsheet(ss: GoogleAppsScript.Spreadsheet.Spreadsheet, n
     }
   }
 
-  // Each seed goes in only while its tab has no data rows, so re-running
-  // setup never brings back a row the owner deleted.
-  const seeds: [TabName, (id: () => string) => Row[]][] = [
-    ["Categories", seedCategories],
-    ["QuickAdd", seedQuickAdd],
-    ["SavedFoods", seedSavedFoods],
-    ["Recurring", seedRecurring],
-  ];
-  for (const [tab, seed] of seeds) {
+  // Starter rows go in once per tab, ever (see planSeeds).
+  const settingsSheet = ss.getSheetByName("Settings")!;
+  const settingsValues = settingsSheet.getDataRange().getValues();
+  const idCol = settingsValues[0].map((h) => String(h).trim()).indexOf("ID");
+  const settings: Row[] = settingsValues.slice(1).map((line) => ({ ID: String(line[idCol] ?? "") }));
+  const plan = planSeeds(
+    SEEDED_TABS.map((tab) => ({ tab, hasRows: ss.getSheetByName(tab)!.getLastRow() >= 2 })),
+    settings,
+    todayTaipei(),
+    newId,
+  );
+  for (const { tab, rows } of plan.writes) {
     const sh = ss.getSheetByName(tab)!;
-    if (sh.getLastRow() >= 2) continue;
     const headers = headerRow(sh);
-    const rows = seed(newId);
     sh.getRange(2, 1, rows.length, headers.length).setValues(rows.map((r) => valuesForRow(headers, r)));
+  }
+  if (plan.markers.length) {
+    const headers = headerRow(settingsSheet);
+    const start = settingsSheet.getLastRow() + 1;
+    settingsSheet.getRange(start, 1, plan.markers.length, headers.length).setValues(plan.markers.map((r) => valuesForRow(headers, r)));
   }
   const categories = ss.getSheetByName("Categories")!;
 

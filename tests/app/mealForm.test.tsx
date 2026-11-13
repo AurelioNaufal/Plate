@@ -42,6 +42,22 @@ test("quick-add adds each portion to the totals, names the meal, and − takes o
   expect(screen.getByLabelText("Protein (g)")).toHaveValue("34");
 });
 
+test("taking every portion away leaves the numbers blank, not 0", async () => {
+  renderForm();
+  await userEvent.click(quick().getByRole("button", { name: "Rice (scoop)" }));
+  await userEvent.click(quick().getByRole("button", { name: "Remove one Rice (scoop)" }));
+  expect(screen.getByLabelText("Kcal")).toHaveValue("");
+  expect(screen.getByLabelText("Protein (g)")).toHaveValue("");
+});
+
+test("a quick-add item without a protein value leaves protein blank", async () => {
+  data.current = { ...data.current, rows: { ...(data.current.rows as object), QuickAdd: [{ ID: "q9", Name: "Veggies", Kcal: 100, Protein: null, SortOrder: 1 }] } };
+  renderForm();
+  await userEvent.click(quick().getByRole("button", { name: "Veggies" }));
+  expect(screen.getByLabelText("Kcal")).toHaveValue("100");
+  expect(screen.getByLabelText("Protein (g)")).toHaveValue("");
+});
+
 test("quick-add keeps a value typed by hand and adds to it", async () => {
   renderForm();
   await userEvent.type(screen.getByLabelText("Kcal"), "100");

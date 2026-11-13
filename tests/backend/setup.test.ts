@@ -1,4 +1,35 @@
-import { seedCategories, seedQuickAdd, seedSavedFoods, seedRecurring, summaryFormulas } from "../../src/backend/setup";
+import { seedCategories, seedQuickAdd, seedSavedFoods, seedRecurring, summaryFormulas, planSeeds } from "../../src/backend/setup";
+
+describe("planSeeds", () => {
+  let k = 0;
+  const id = () => `p${++k}`;
+  const empty = (tab: string) => ({ tab, hasRows: false }) as { tab: "Recurring"; hasRows: boolean };
+
+  test("an empty tab is seeded once and marked", () => {
+    const plan = planSeeds([empty("Recurring")], [], "2026-11-13", id);
+    expect(plan.writes.map((w) => w.tab)).toEqual(["Recurring"]);
+    expect(plan.markers).toEqual([{ ID: "seeded:Recurring", Value: "2026-11-13" }]);
+  });
+
+  test("a tab emptied by the owner is not seeded again", () => {
+    const plan = planSeeds([empty("Recurring")], [{ ID: "seeded:Recurring", Value: "2026-11-13" }], "2027-03-01", id);
+    expect(plan.writes).toEqual([]);
+    expect(plan.markers).toEqual([]);
+  });
+
+  test("a tab that already has rows only gets its marker", () => {
+    const plan = planSeeds([{ tab: "Categories", hasRows: true }], [], "2026-11-13", id);
+    expect(plan.writes).toEqual([]);
+    expect(plan.markers).toEqual([{ ID: "seeded:Categories", Value: "2026-11-13" }]);
+  });
+
+  test("recurring starter items never start in the past", () => {
+    const plan = planSeeds([empty("Recurring")], [], "2027-03-01", id);
+    expect(plan.writes[0].rows.map((r) => r.StartDate)).toEqual(["2027-03-01", "2027-03-01"]);
+    const early = planSeeds([empty("Recurring")], [], "2026-11-13", id);
+    expect(early.writes[0].rows.map((r) => r.StartDate)).toEqual(["2026-11-15", "2026-11-15"]);
+  });
+});
 
 describe("starter rows", () => {
   let n = 0;

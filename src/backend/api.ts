@@ -3,6 +3,7 @@ import { normalizeRow } from "./store";
 import { isTabName, type Row, type TabName } from "../shared/schema";
 import { parseSheetDate, todayTaipei } from "../shared/dates";
 import { runRecurringCharges } from "./recurring";
+import { recurringProblem } from "../shared/recurring";
 
 export type ErrorCode = "UNAUTHORIZED" | "BAD_REQUEST" | "NOT_FOUND" | "CONFLICT" | "SERVER";
 export type ApiResponse = { ok: true; data: unknown } | { ok: false; error: { code: ErrorCode; message: string } };
@@ -181,22 +182,11 @@ function laterDate(a: unknown, b: unknown): string | null {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const isWhole = (v: unknown, min: number, max = Infinity) => typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
 
 function validate(tab: TabName, row: Row, others: Row[]) {
   if (tab === "Recurring") {
-    if (typeof row.Name !== "string" || !row.Name.trim()) fail("BAD_REQUEST", "Name is required");
-    if (!isWhole(row.Amount, 1)) fail("BAD_REQUEST", "Amount must be a whole number above 0");
-    if (row.Frequency === "weekly") {
-      if (!isWhole(row.Weekday, 0, 6)) fail("BAD_REQUEST", "Weekday must be 0 (Sunday) to 6 (Saturday)");
-    } else if (row.Frequency === "monthly") {
-      if (!isWhole(row.MonthDay, 1, 31)) fail("BAD_REQUEST", "MonthDay must be 1 to 31");
-    } else {
-      fail("BAD_REQUEST", "Frequency must be weekly or monthly");
-    }
-    if (typeof row.StartDate !== "string" || !ISO_DATE.test(row.StartDate) || !parseSheetDate(row.StartDate)) {
-      fail("BAD_REQUEST", "StartDate must be YYYY-MM-DD");
-    }
+    const problem = recurringProblem(row);
+    if (problem) fail("BAD_REQUEST", problem);
   }
   if (tab === "Transactions") {
     if (row.Type !== "expense" && row.Type !== "income") fail("BAD_REQUEST", "Type must be expense or income");

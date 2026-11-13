@@ -4,7 +4,8 @@
 // never repeated, and ChargedThrough stops a deleted charge coming back.
 import type { Row } from "../shared/schema";
 import type { SheetStore } from "./store";
-import { dueDates, windowStart } from "../shared/recurring";
+import { dueDates, recurringProblem, windowStart } from "../shared/recurring";
+import { addDays } from "../shared/dates";
 
 export function chargeId(recurringId: string, date: string): string {
   return `rec_${recurringId}_${date}`;
@@ -15,11 +16,21 @@ export function chargesDue(items: Row[], txs: Row[], today: string, now: Date): 
   const byItemDate = new Set(txs.filter((t) => t.RecurringID).map((t) => `${t.RecurringID}|${t.Date}`));
   const charges: Row[] = [];
   const updatedItems: Row[] = [];
+  const yesterday = addDays(today, -1);
   for (const item of items) {
     // A row typed into the Sheet gets an ID on the next list; charge it then.
-    if (item.Active !== true || !item.ID) continue;
+    // A row with an unreadable value is skipped (the Recurring screen flags it).
+    if (!item.ID || recurringProblem(item)) continue;
     const id = String(item.ID);
     const start = windowStart(item);
+    const through = typeof item.ChargedThrough === "string" ? item.ChargedThrough : "";
+    if (item.Active !== true) {
+      // Switched off: keep the window moving (to yesterday, so switching back
+      // on today can still charge today), so ticking Active again in the Sheet
+      // never fills in the weeks it was off.
+      if (start <= yesterday && (!through || through < yesterday)) updatedItems.push({ ...item, ChargedThrough: yesterday });
+      continue;
+    }
     if (start > today) continue;
     for (const date of dueDates(item, start, today)) {
       const cid = chargeId(id, date);
@@ -36,7 +47,6 @@ export function chargesDue(items: Row[], txs: Row[], today: string, now: Date): 
         CreatedAt: now.toISOString(),
       });
     }
-    const through = typeof item.ChargedThrough === "string" ? item.ChargedThrough : "";
     if (!through || through < today) updatedItems.push({ ...item, ChargedThrough: today });
   }
   return { charges, updatedItems };

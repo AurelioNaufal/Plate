@@ -79,9 +79,9 @@ describe("planFoodImport", () => {
     expect(planFoodImport({ transactions: appTx, meals: [], savedFoods: [], estimates, newId, now: NOW }).newMeals).toEqual([]);
   });
 
-  test("hand-typed expenses are included", () => {
-    const manual = [tx("m1", "Chicken Rice", 90, { Source: "manual" })];
-    expect(planFoodImport({ transactions: manual, meals: [], savedFoods: [], estimates, newId, now: NOW }).newMeals).toHaveLength(1);
+  test("hand-typed expenses are included, whether marked manual or left blank in the Sheet", () => {
+    const manual = [tx("m1", "Chicken Rice", 90, { Source: "manual" }), tx("m2", "Chicken Rice", 90, { Source: null })];
+    expect(planFoodImport({ transactions: manual, meals: [], savedFoods: [], estimates, newId, now: NOW }).newMeals).toHaveLength(2);
   });
 
   test("only estimated meals whose expense is gone are orphans", () => {

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useData } from "../store";
 import { todayTaipei } from "../../shared/dates";
 import { formatNT, parseAmountInput } from "../../shared/money";
-import { describeSchedule } from "../../shared/recurring";
+import { describeSchedule, recurringProblem } from "../../shared/recurring";
 import type { Row } from "../../shared/schema";
 import { BackHeader } from "../components/BackHeader";
 import { ConfirmDelete } from "../components/ConfirmDelete";
@@ -53,7 +53,13 @@ export function Recurring({ today = todayTaipei(), onBack }: Props) {
                 <button className="list-row" onClick={() => setEditing(String(item.ID))}>
                   <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{show(item.Name)}</span>
-                    <span className="small muted">{`${formatNT(Number(item.Amount))} · ${describeSchedule(item)}`}</span>
+                    {recurringProblem(item) ? (
+                      <span className="small" style={{ color: "var(--danger)", fontWeight: 600 }}>
+                        {`Fix this row in the Sheet: ${recurringProblem(item)}`}
+                      </span>
+                    ) : (
+                      <span className="small muted">{`${formatNT(Number(item.Amount))} · ${describeSchedule(item)}`}</span>
+                    )}
                   </span>
                 </button>
                 <input

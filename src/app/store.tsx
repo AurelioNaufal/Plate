@@ -5,8 +5,11 @@ import { applyChanges, changeId, type Change } from "../shared/changes";
 
 type Status = "needs-setup" | "loading" | "ready" | "error";
 type Rows = Record<TabName, Row[]>;
-/** One request being sent, or one that failed. `id` is its first change's row ID. */
+/** One request being sent, or one that failed. `id` is unique per request. */
 type PendingOp = { id: string; tab: TabName; changes: Change[]; error?: string };
+
+let requestCount = 0;
+const requestId = () => `req${++requestCount}`;
 
 export type DataState = {
   status: Status;
@@ -91,7 +94,11 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
       if (changes.length === 0) return;
       const full = changes.map((c): Change => ("row" in c && !c.row.ID ? { ...c, row: { ...c.row, ID: newId() } } : c));
       setRows((prev) => applyChanges(prev, full));
-      await send({ id: changeId(full[0]), tab: full[0].tab, changes: full });
+      // A failed earlier save of the same rows is superseded: retrying it
+      // later would put the older values back over these.
+      const ids = new Set(full.map(changeId));
+      setPending((prev) => prev.filter((p) => !(p.error && p.changes.every((c) => ids.has(changeId(c))))));
+      await send({ id: requestId(), tab: full[0].tab, changes: full });
     },
     [send],
   );
@@ -101,7 +108,9 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
 
   const retry = useCallback(
     async (id: string) => {
-      const op = pendingRef.current.find((p) => p.id === id);
+      // By request ID, or by the row ID of a request's first change (the
+      // latest such request).
+      const op = pendingRef.current.find((p) => p.id === id) ?? [...pendingRef.current].reverse().find((p) => changeId(p.changes[0]) === id);
       if (op) await send(op);
     },
     [send],

@@ -8,16 +8,46 @@ import { addDays, lastDayOfMonth, monthKey, addMonths, weekday } from "./dates";
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const isDate = (v: unknown): v is string => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const isWhole = (v: unknown, min: number, max = Infinity) => typeof v === "number" && Number.isInteger(v) && v >= min && v <= max;
+
+/** "weekly" | "monthly" in any case (the Sheet may say "Weekly"), else null. */
+export function frequencyOf(item: Row): "weekly" | "monthly" | null {
+  const f = String(item.Frequency ?? "").trim().toLowerCase();
+  return f === "weekly" || f === "monthly" ? f : null;
+}
+
+/**
+ * What's wrong with an item, or null if it can be charged. App saves are
+ * refused with this message; rows typed into the Sheet with a problem are
+ * skipped (and flagged on the Recurring screen) instead of breaking the run.
+ */
+export function recurringProblem(item: Row): string | null {
+  if (typeof item.Name !== "string" || !item.Name.trim()) return "Name is required";
+  if (!isWhole(item.Amount, 1)) return "Amount must be a whole number above 0";
+  const f = frequencyOf(item);
+  if (!f) return "Frequency must be weekly or monthly";
+  if (f === "weekly" && !isWhole(item.Weekday, 0, 6)) return "Weekday must be 0 (Sunday) to 6 (Saturday)";
+  if (f === "monthly" && !isWhole(item.MonthDay, 1, 31)) return "MonthDay must be 1 to 31";
+  if (!isDate(item.StartDate) || !validDay(item.StartDate)) return "StartDate must be YYYY-MM-DD";
+  return null;
+}
+
+function validDay(d: string): boolean {
+  const day = Number(d.slice(8, 10));
+  const month = Number(d.slice(5, 7));
+  return month >= 1 && month <= 12 && day >= 1 && day <= lastDayOfMonth(d.slice(0, 7));
+}
 
 /** Due dates in [from, to], inclusive. Ignores Active. */
 export function dueDates(item: Row, from: string, to: string): string[] {
   if (from > to) return [];
   const out: string[] = [];
-  if (item.Frequency === "weekly") {
+  const frequency = frequencyOf(item);
+  if (frequency === "weekly") {
     const wd = Number(item.Weekday);
     let d = addDays(from, (wd - weekday(from) + 7) % 7);
     for (; d <= to; d = addDays(d, 7)) out.push(d);
-  } else if (item.Frequency === "monthly") {
+  } else if (frequency === "monthly") {
     const day = Number(item.MonthDay);
     for (let m = monthKey(from); m <= monthKey(to); m = addMonths(m, 1)) {
       const d = `${m}-${String(Math.min(day, lastDayOfMonth(m))).padStart(2, "0")}`;
@@ -40,7 +70,7 @@ export function upcomingCharges(items: Row[], today: string, days = 7): { item: 
   const end = addDays(today, days);
   const out: { item: Row; date: string }[] = [];
   for (const item of items) {
-    if (item.Active !== true) continue;
+    if (item.Active !== true || recurringProblem(item)) continue;
     const start = windowStart(item);
     for (const date of dueDates(item, start > today ? start : today, end)) out.push({ item, date });
   }
@@ -54,7 +84,7 @@ function ordinal(n: number): string {
 }
 
 export function describeSchedule(item: Row): string {
-  if (item.Frequency === "weekly") return `Every ${WEEKDAYS[Number(item.Weekday)] ?? "week"}`;
+  if (frequencyOf(item) === "weekly") return `Every ${WEEKDAYS[Number(item.Weekday)] ?? "week"}`;
   const day = Number(item.MonthDay);
   return `Monthly on the ${ordinal(day)}${day >= 29 ? " (last day in short months)" : ""}`;
 }

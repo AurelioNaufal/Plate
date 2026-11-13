@@ -65,15 +65,23 @@ export function MealForm({ meal, today, nowTime, onDone }: Props) {
 
   function addPortion(q: Row, delta: 1 | -1) {
     const id = String(q.ID);
-    const k = typeof q.Kcal === "number" ? q.Kcal : 0;
-    const p = typeof q.Protein === "number" ? q.Protein : 0;
-    setKcal((v) => String(Math.max(0, roundKcal(current(v) + delta * k))));
-    setProtein((v) => String(Math.max(0, roundProtein(current(v) + delta * p))));
-    setCounts((cs) => {
-      const found = cs.find((c) => c.id === id);
-      if (found) return cs.map((c) => (c.id === id ? { ...c, count: Math.max(0, c.count + delta) } : c));
-      return delta > 0 ? [...cs, { id, name: show(q.Name), count: 1 }] : cs;
-    });
+    const found = counts.find((c) => c.id === id);
+    const nextCounts = found
+      ? counts.map((c) => (c.id === id ? { ...c, count: Math.max(0, c.count + delta) } : c))
+      : delta > 0
+        ? [...counts, { id, name: show(q.Name), count: 1 }]
+        : counts;
+    const emptyPlate = nextCounts.every((c) => c.count === 0);
+    // Blank means "not tracked": an item without a value leaves the field
+    // alone, and taking every portion away goes back to blank, not 0.
+    const step = (value: unknown, round: (n: number) => number) => (v: string) => {
+      if (typeof value !== "number") return v;
+      const next = Math.max(0, round(current(v) + delta * value));
+      return emptyPlate && next === 0 ? "" : String(next);
+    };
+    setKcal(step(q.Kcal, roundKcal));
+    setProtein(step(q.Protein, roundProtein));
+    setCounts(nextCounts);
     if (delta > 0 && !name.trim()) setName("Prasmanan");
     setItemsTouched(true);
     clearError();

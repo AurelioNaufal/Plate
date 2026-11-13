@@ -1,4 +1,4 @@
-import { dueDates, windowStart, upcomingCharges, describeSchedule } from "../../src/shared/recurring";
+import { dueDates, windowStart, upcomingCharges, describeSchedule, recurringProblem } from "../../src/shared/recurring";
 import type { Row } from "../../src/shared/schema";
 
 export const gym: Row = { ID: "r1", Name: "Gym", Amount: 40, Category: "Health", Frequency: "weekly", Weekday: 0, MonthDay: null, Active: true, StartDate: "2026-11-15", ActiveSince: null, ChargedThrough: null };
@@ -40,6 +40,20 @@ describe("upcomingCharges", () => {
       { item: { ...gym, ChargedThrough: "2026-11-15" }, date: "2026-11-22" },
     ]);
   });
+});
+
+test("recurringProblem names the field a hand-typed row gets wrong", () => {
+  expect(recurringProblem(gym)).toBeNull();
+  expect(recurringProblem({ ...gym, Weekday: "Sun" })).toBe("Weekday must be 0 (Sunday) to 6 (Saturday)");
+  expect(recurringProblem({ ...gym, Frequency: "daily" })).toBe("Frequency must be weekly or monthly");
+  expect(recurringProblem({ ...gym, Frequency: "MONTHLY", MonthDay: 40 })).toBe("MonthDay must be 1 to 31");
+  expect(recurringProblem({ ...gym, Amount: 40.5 })).toBe("Amount must be a whole number above 0");
+  expect(recurringProblem({ ...gym, Name: "" })).toBe("Name is required");
+  expect(recurringProblem({ ...gym, StartDate: "2026-02-30" })).toBe("StartDate must be YYYY-MM-DD");
+});
+
+test("upcomingCharges skips rows it can't read instead of throwing", () => {
+  expect(upcomingCharges([{ ...gym, Weekday: "Sun" }, laundry], "2026-11-13").map((u) => u.item.Name)).toEqual(["Laundry"]);
 });
 
 test("describeSchedule", () => {

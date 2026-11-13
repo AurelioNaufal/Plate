@@ -133,6 +133,12 @@ describe("Recurring charges", () => {
     expect(screen.getByRole("button", { name: /Gym/ })).toHaveTextContent("NT$40 · Every Sunday");
   });
 
+  test("a row typed into the Sheet with a bad value is flagged", () => {
+    data.current = { ...data.current, rows: { ...(data.current.rows as object), Recurring: [{ ...gym, Weekday: "Sun" }] } };
+    render(<Recurring today="2026-11-20" onBack={() => {}} />);
+    expect(screen.getByRole("button", { name: /Gym/ })).toHaveTextContent("Fix this row in the Sheet: Weekday must be 0 (Sunday) to 6 (Saturday)");
+  });
+
   test("switching off saves Active false and keeps the rest", async () => {
     render(<Recurring today="2026-11-20" onBack={() => {}} />);
     await userEvent.click(screen.getByRole("switch", { name: "Gym" }));

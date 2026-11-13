@@ -182,6 +182,15 @@ describe("recurring", () => {
     expect(data.Recurring[0].ChargedThrough).toBe("2026-11-15");
   });
 
+  test("a hand-typed item with Weekday 'Sun' doesn't stop the app loading", () => {
+    const store = new MemoryStore({ Recurring: [{ ...gym, Weekday: "Sun" }], Transactions: [] });
+    const res = handleRequest(JSON.stringify({ token: TOKEN, action: "list", tabs: ["Transactions", "Recurring"] }), {
+      store, token: TOKEN, now: sundayNoon, newId: () => "x",
+    });
+    expect(res.ok).toBe(true);
+    expect(store.read("Transactions")).toEqual([]);
+  });
+
   test("list without Transactions does not charge", () => {
     const store = new MemoryStore({ Recurring: [gym], Transactions: [] });
     handleRequest(JSON.stringify({ token: TOKEN, action: "list", tabs: ["Recurring"] }), { store, token: TOKEN, now: sundayNoon, newId: () => "x" });

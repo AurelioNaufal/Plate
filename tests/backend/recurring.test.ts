@@ -17,8 +17,42 @@ describe("chargesDue", () => {
     expect(updatedItems[0].ChargedThrough).toBe("2026-11-29");
   });
 
-  test("a switched-off item gives no charges", () => {
-    expect(chargesDue([{ ...gym, Active: false }], [], "2026-11-29", NOW)).toEqual({ charges: [], updatedItems: [] });
+  test("a switched-off item gives no charges but its window keeps moving up to yesterday", () => {
+    const { charges, updatedItems } = chargesDue([{ ...gym, Active: false }], [], "2026-11-29", NOW);
+    expect(charges).toEqual([]);
+    expect(updatedItems.map((i) => i.ChargedThrough)).toEqual(["2026-11-28"]);
+  });
+
+  test("ticked back on in the Sheet: the weeks it was off are not charged", () => {
+    const store = new MemoryStore({ Recurring: [{ ...gym, Active: false }], Transactions: [] });
+    runRecurringCharges(store, "2026-11-29", NOW); // still off
+    store.updateMany("Recurring", [{ ...store.read("Recurring")[0], Active: true }]); // owner ticks it, no ActiveSince
+    runRecurringCharges(store, "2026-11-29", NOW);
+    expect(store.read("Transactions").map((t) => t.Date)).toEqual(["2026-11-29"]);
+  });
+
+  test("switched on in the app on a due day still charges that day", () => {
+    const store = new MemoryStore({ Recurring: [{ ...gym, Active: false }], Transactions: [] });
+    runRecurringCharges(store, "2026-11-29", NOW);
+    store.updateMany("Recurring", [{ ...store.read("Recurring")[0], Active: true, ActiveSince: "2026-11-29" }]);
+    expect(runRecurringCharges(store, "2026-11-29", NOW)).toBe(1);
+  });
+
+  test.each([
+    ["Weekday typed as text", { Weekday: "Sun" }],
+    ["blank Weekday", { Weekday: null }],
+    ["monthly with a blank MonthDay", { Frequency: "monthly", MonthDay: null }],
+    ["monthly with MonthDay text", { Frequency: "monthly", MonthDay: "last" }],
+    ["blank Amount", { Amount: null }],
+    ["blank StartDate", { StartDate: null }],
+    ["StartDate text", { StartDate: "soon" }],
+  ])("a hand-typed row with %s is skipped instead of breaking the run", (_label, over) => {
+    expect(() => chargesDue([{ ...gym, ...(over as Row) }], [], "2026-11-29", NOW)).not.toThrow();
+    expect(chargesDue([{ ...gym, ...(over as Row) }], [], "2026-11-29", NOW)).toEqual({ charges: [], updatedItems: [] });
+  });
+
+  test("Frequency is read in any case", () => {
+    expect(chargesDue([{ ...gym, Frequency: "Weekly" }], [], "2026-11-15", NOW).charges).toHaveLength(1);
   });
 
   test("switched back on: nothing before ActiveSince is back-filled", () => {

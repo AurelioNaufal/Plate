@@ -97,12 +97,59 @@ test("apply shows linked rows at once, keeps one pending entry on failure, and r
   expect(result.current.rows.Meals.map((m) => m.ID)).toEqual(["m1"]);
   expect(result.current.rows.Transactions.map((t) => t.ID)).toEqual(["t1"]);
   expect(result.current.pending).toHaveLength(1);
-  expect(result.current.pending[0]).toMatchObject({ id: "m1", tab: "Meals", error: expect.stringContaining("Can't reach") });
+  expect(result.current.pending[0]).toMatchObject({ tab: "Meals", error: expect.stringContaining("Can't reach") });
 
   fail = false;
-  await act(() => result.current.retry("m1"));
+  await act(() => result.current.retry(result.current.pending[0].id));
   expect(api.batches).toHaveLength(2);
   expect(api.batches[1]).toEqual(changes);
+  expect(result.current.pending).toHaveLength(0);
+});
+
+test("two quick saves of the same row keep their own pending entries, so a failure isn't lost", async () => {
+  let releaseFirst!: () => void;
+  let call = 0;
+  const api = fakeApi();
+  api.batch = async (changes) => {
+    call++;
+    if (call === 1) {
+      await new Promise<void>((r) => (releaseFirst = r));
+      return { saved: changes.filter((c): c is { tab: "Meals"; row: Row } => "row" in c).map((c) => ({ tab: c.tab, row: c.row })), removed: 0 };
+    }
+    throw new ApiError("NETWORK", "Can't reach the server");
+  };
+  const { result } = renderHook(() => useData(), { wrapper: wrap(api) });
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+
+  let first!: Promise<void>;
+  act(() => {
+    first = result.current.apply([{ tab: "Meals", row: { ID: "m1", Name: "A" } }]);
+  });
+  await act(() => result.current.apply([{ tab: "Meals", row: { ID: "m1", Name: "B" } }]));
+  await act(async () => {
+    releaseFirst();
+    await first;
+  });
+  expect(result.current.pending).toHaveLength(1);
+  expect(result.current.pending[0].error).toContain("Can't reach");
+  expect(result.current.pending[0].changes).toEqual([{ tab: "Meals", row: { ID: "m1", Name: "B" } }]);
+});
+
+test("a new save replaces an earlier failed save of the same row", async () => {
+  let fail = true;
+  const api = fakeApi();
+  const realBatch = api.batch;
+  api.batch = async (changes) => {
+    if (fail) throw new ApiError("NETWORK", "Can't reach the server");
+    return realBatch(changes);
+  };
+  const { result } = renderHook(() => useData(), { wrapper: wrap(api) });
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+  await act(() => result.current.apply([{ tab: "Meals", row: { ID: "m1", Name: "Old" } }]));
+  expect(result.current.pending).toHaveLength(1);
+  fail = false;
+  await act(() => result.current.apply([{ tab: "Meals", row: { ID: "m1", Name: "New" } }]));
+  // The stale failed copy must not be retried later over the newer one.
   expect(result.current.pending).toHaveLength(0);
 });
 

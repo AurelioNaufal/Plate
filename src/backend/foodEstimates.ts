@@ -67,7 +67,8 @@ export function planFoodImport({ transactions, meals, savedFoods, estimates, new
     (t) =>
       t.Type === "expense" &&
       String(t.Category ?? "").trim().toLowerCase() === "food" &&
-      (t.Source === "migrated" || t.Source === "manual") &&
+      // Rows typed into the Sheet have a blank Source in the store ("manual" is only added in list replies).
+      (t.Source === "migrated" || t.Source === "manual" || t.Source === null || t.Source === undefined || t.Source === "") &&
       !linked.has(String(t.ID)),
   );
 
