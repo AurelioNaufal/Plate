@@ -9,7 +9,7 @@ import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
 
-type Screen = { name: Tab } | { name: "new"; editId?: string } | { name: "settings" } | { name: "categories" };
+type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" };
 
 export function App() {
   const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
@@ -83,7 +83,12 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
       )}
       {screen.name === "settings" && <Settings config={config} onSave={(c) => { onSaveConfig(c); setScreen({ name: "today" }); }} onOpenCategories={() => setScreen({ name: "categories" })} />}
       {screen.name === "new" && (
-        <NewEntry key={screen.editId ?? "new"} editId={screen.editId} onDone={() => setScreen({ name: screen.editId ? "money" : "today" })} />
+        <NewEntry
+          key={screen.editId ?? screen.editMealId ?? "new"}
+          editId={screen.editId}
+          editMealId={screen.editMealId}
+          onDone={() => setScreen({ name: screen.editId ? "money" : "today" })}
+        />
       )}
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
 

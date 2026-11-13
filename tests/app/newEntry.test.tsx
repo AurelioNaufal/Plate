@@ -33,6 +33,7 @@ beforeEach(() => {
 test("saves a typed expense with today's date", async () => {
   const onDone = vi.fn();
   render(<NewEntry today="2026-11-12" onDone={onDone} />);
+  await userEvent.click(screen.getByRole("tab", { name: "Expense" }));
   await userEvent.type(screen.getByLabelText("Amount (NT$)"), "1,200");
   await userEvent.type(screen.getByLabelText("Description"), "Haircut");
   await userEvent.selectOptions(screen.getByLabelText("Category"), "Utilities");
@@ -46,14 +47,37 @@ test("saves a typed expense with today's date", async () => {
 
 test("an amount with cents shows an error and does not save", async () => {
   render(<NewEntry today="2026-11-12" onDone={() => {}} />);
+  await userEvent.click(screen.getByRole("tab", { name: "Expense" }));
   await userEvent.type(screen.getByLabelText("Amount (NT$)"), "80.5");
   await userEvent.click(screen.getByRole("button", { name: "Save" }));
   expect(screen.getByText("Use whole NT$ (no cents)")).toBeInTheDocument();
   expect(save).not.toHaveBeenCalled();
 });
 
-test("hidden categories are not offered", () => {
+test("a new entry opens on the Meal tab", () => {
   render(<NewEntry today="2026-11-12" onDone={() => {}} />);
+  expect(screen.getByRole("tab", { name: "Meal" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByLabelText("Name")).toBeInTheDocument();
+});
+
+test("opening an expense that belongs to a meal shows the meal", () => {
+  const rows = data.current.rows as Record<string, unknown[]>;
+  data.current = {
+    ...data.current,
+    rows: {
+      ...rows,
+      Meals: [{ ID: "m1", Date: "2026-11-12", Name: "Buffet lunch", Kcal: 650, Protein: 32, InBudget: true, TransactionID: "t1" }],
+      Transactions: [...rows.Transactions, { ID: "t1", Type: "expense", Date: "2026-11-12", Amount: 80, Description: "Buffet lunch", Category: "Food", MealID: "m1" }],
+    },
+  };
+  render(<NewEntry editId="t1" today="2026-11-12" onDone={() => {}} />);
+  expect(screen.getByLabelText("Name")).toHaveValue("Buffet lunch");
+  expect(screen.getByLabelText("Price (NT$)")).toHaveValue("80");
+});
+
+test("hidden categories are not offered", async () => {
+  render(<NewEntry today="2026-11-12" onDone={() => {}} />);
+  await userEvent.click(screen.getByRole("tab", { name: "Expense" }));
   const options = within(screen.getByLabelText("Category")).getAllByRole("option").map((o) => o.textContent);
   expect(options).toContain("Food");
   expect(options).not.toContain("Furniture");

@@ -25,6 +25,7 @@ export function Money({ today = todayTaipei(), onOpen }: Props) {
   }, [rows.Categories, txs]);
 
   const listed = txs.filter((t) => inPeriod(t, period) && (!category || t.Category === category));
+  const mealsById = useMemo(() => new Map((rows.Meals ?? []).map((m) => [String(m.ID), m])), [rows.Meals]);
   // Every row in a pending request shows "saving…", not just the first one.
   const pendingIds = new Set(pending.flatMap((p) => p.changes.map(changeId)));
 
@@ -75,7 +76,7 @@ export function Money({ today = todayTaipei(), onOpen }: Props) {
             ))}
           </select>
         </div>
-        <TransactionList transactions={listed} pendingIds={pendingIds} onOpen={onOpen} />
+        <TransactionList transactions={listed} pendingIds={pendingIds} mealsById={mealsById} onOpen={onOpen} />
       </section>
     </main>
   );
