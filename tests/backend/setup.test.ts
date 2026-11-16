@@ -48,7 +48,8 @@ describe("starter rows", () => {
     const rows = seedSavedFoods(newId);
     expect(rows).toHaveLength(3);
     expect(rows).toContainEqual(expect.objectContaining({ Name: "Combo Roti + Milk Fami", Price: 49, Kcal: 450, Protein: 14, SortOrder: 1 }));
-    expect(rows).toContainEqual(expect.objectContaining({ Name: "McD McChicken Meal", Price: 151, Kcal: 800, Protein: 20 }));
+    // McChicken + medium fries + lemon tea.
+    expect(rows).toContainEqual(expect.objectContaining({ Name: "McD McChicken Meal", Price: 151, Kcal: 880, Protein: 19 }));
   });
 
   test("seedRecurring has gym and laundry every Sunday from 15 Nov", () => {

@@ -23,7 +23,7 @@ const QUICK_ADD: [string, number, number][] = [
 const SAVED_FOODS: [string, number, number, number][] = [
   ["Combo Roti + Milk Fami", 49, 450, 14],
   ["7-11 Tuna Onigiri", 35, 200, 6],
-  ["McD McChicken Meal", 151, 800, 20],
+  ["McD McChicken Meal", 151, 880, 19], // McChicken + medium fries + lemon tea
 ];
 
 export function seedQuickAdd(newId: () => string): Row[] {
