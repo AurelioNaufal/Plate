@@ -46,7 +46,9 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--ink); }
+html, body { margin: 0; background: var(--bg); color: var(--ink); overflow-x: hidden; }
+/* App feel: no double-tap zoom, no grey flash on tap, text size fixed by us. */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
 button, input, select { font: inherit; color: inherit; }
 a { color: var(--accent); }
@@ -72,7 +74,7 @@ h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .segmented button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
-.field input, .field select { border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 500; color: var(--ink); min-height: 46px; width: 100%; }
+.field input, .field select { border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 12px; font-size: 16px; font-weight: 500; color: var(--ink); min-height: 46px; width: 100%; }
 .field-error { color: var(--danger); font-size: 12px; font-weight: 600; }
 
 .btn { border: 0; border-radius: 12px; min-height: 48px; padding: 0 16px; font-size: 15px; font-weight: 600; cursor: pointer; }

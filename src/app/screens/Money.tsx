@@ -68,7 +68,8 @@ export function Money({ today = todayTaipei(), onOpen }: Props) {
             aria-label="Category filter"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 600, minHeight: 34 }}
+            // Long category names must not push the card past the screen edge.
+            style={{ border: "1px solid var(--border)", background: "var(--card)", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 600, minHeight: 34, minWidth: 0, maxWidth: "60%", textOverflow: "ellipsis" }}
           >
             <option value="">All categories</option>
             {categoryNames.map((n) => (
