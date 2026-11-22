@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 import { useData } from "../store";
 import { periodFor, summarize } from "../../shared/aggregate";
-import { monthKey, todayTaipei, weekday } from "../../shared/dates";
+import { addDays, monthKey, todayTaipei, weekday } from "../../shared/dates";
 import { budgetStatus } from "../../shared/budgets";
+import { weeklyReview } from "../../shared/review";
+import { WeeklyReview, weekLabel } from "../components/WeeklyReview";
 import { routinesForDay } from "../../shared/gym";
 import { formatNT } from "../../shared/money";
 import { dayNutrition, proteinPerTen, proteinValueText, roundProtein, targetsFrom } from "../../shared/meals";
@@ -40,6 +42,8 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
   const txById = useMemo(() => new Map(txs.map((t) => [String(t.ID), t])), [txs]);
 
   const food = budgetStatus(rows.Budgets ?? [], txs, monthKey(today), rows.Categories ?? []).find((b) => b.category === "Food");
+  // On Sundays, the week that just ended.
+  const review = useMemo(() => (weekday(today) === 0 ? weeklyReview(rows, addDays(today, -7)) : null), [rows, today]);
   const setsToday = (rows.Workouts ?? []).filter((w) => w.Date === today).length;
   const todaysRoutines = routinesForDay(rows.Routines ?? [], weekday(today));
 
@@ -54,6 +58,16 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
           <h1>Today</h1>
         </div>
       </header>
+
+      {review && (
+        <section className="card" aria-label="Last week">
+          <div>
+            <div className="eyebrow">Sunday review</div>
+            <h2>{weekLabel(review)}</h2>
+          </div>
+          <WeeklyReview review={review} />
+        </section>
+      )}
 
       <section className="card grid-2" aria-label="Today's nutrition" style={{ display: "grid" }}>
         <div className="ring-stat">

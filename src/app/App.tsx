@@ -8,6 +8,7 @@ import { Money } from "./screens/Money";
 import { CategoryDetail } from "./screens/CategoryDetail";
 import { Export } from "./screens/Export";
 import { Budgets } from "./screens/Budgets";
+import { Reviews } from "./screens/Reviews";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
@@ -28,7 +29,7 @@ import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 import { periodFor, type Period } from "../shared/aggregate";
 
-type Screen = { name: Tab; asking?: string | null } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "budgets"; from: "money" | "settings" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
+type Screen = { name: Tab; asking?: string | null } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "reviews" } | { name: "budgets"; from: "money" | "settings" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
   | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" } | { name: "profile" };
 
@@ -156,6 +157,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onOpenProfile={() => setScreen({ name: "profile" })}
           onOpenSettings={() => setScreen({ name: "settings" })}
           onOpenTargets={() => setScreen({ name: "targets" })}
+          onOpenReviews={() => setScreen({ name: "reviews" })}
           suggestion={<TargetSuggestion />}
         />
       )}
@@ -193,6 +195,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
         />
       )}
       {screen.name === "budgets" && <Budgets onBack={() => setScreen(screen.from === "money" ? { name: "money" } : { name: "settings" })} />}
+      {screen.name === "reviews" && <Reviews onBack={() => setScreen({ name: "body" })} />}
       {screen.name === "export" && <Export onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
 

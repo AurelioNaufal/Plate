@@ -75,6 +75,8 @@ export const suggestionKey = (s: { protein: number; kcal: number | null }) => `$
 /** Trend change over a week (Sun–Sat): trend by that Saturday minus trend by the Saturday before. */
 export function weekTrendChange(trend: { date: string; kg: number }[], weekStart: string): number | null {
   const at = (day: string) => [...trend].reverse().find((p) => p.date <= day)?.kg ?? null;
+  // A week with no weigh-ins has no change to show (carrying the old trend forward would read as 0).
+  if (!trend.some((p) => p.date >= weekStart && p.date <= addDays(weekStart, 6))) return null;
   const end = at(addDays(weekStart, 6));
   const before = at(addDays(weekStart, -1));
   return end === null || before === null ? null : round1(end - before);
