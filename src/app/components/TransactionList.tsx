@@ -1,9 +1,16 @@
 import { groupByDay } from "../../shared/aggregate";
 import { formatNT } from "../../shared/money";
 import type { Row } from "../../shared/schema";
-import { formatDay } from "../format";
+import { formatDay, formatPct } from "../format";
 
-type Props = { transactions: Row[]; pendingIds: Set<string>; mealsById?: Map<string, Row>; onOpen(id: string): void };
+type Props = {
+  transactions: Row[];
+  pendingIds: Set<string>;
+  mealsById?: Map<string, Row>;
+  /** Each row's part of the list's total, shown as a percent; null hides it. */
+  shareOf?(t: Row): number | null;
+  onOpen(id: string): void;
+};
 
 /** "· 32 g · 650 kcal" for a paid meal; blank values are left out. */
 function nutritionLine(meal: Row | undefined): string {
@@ -14,7 +21,7 @@ function nutritionLine(meal: Row | undefined): string {
   return parts.map((p) => `· ${p}`).join(" ");
 }
 
-export function TransactionList({ transactions, pendingIds, mealsById, onOpen }: Props) {
+export function TransactionList({ transactions, pendingIds, mealsById, shareOf, onOpen }: Props) {
   if (transactions.length === 0) return <p className="muted small" style={{ margin: 0 }}>No transactions here yet.</p>;
   return (
     <ul aria-label="Transactions" className="list" style={{ listStyle: "none", margin: 0, padding: 0 }}>
@@ -30,6 +37,7 @@ export function TransactionList({ transactions, pendingIds, mealsById, onOpen }:
                   {t.MealID && mealsById && <span>{nutritionLine(mealsById.get(String(t.MealID)))}</span>}
                   {t.Source === "recurring" && <span className="tag">auto</span>}
                   {pendingIds.has(String(t.ID)) && <span className="tag">saving…</span>}
+                  {shareOf && shareOf(t) !== null && <span>{formatPct(shareOf(t)!)}</span>}
                 </span>
               </span>
               <b style={{ fontSize: 14, color: t.Type === "income" ? "var(--accent)" : undefined }}>
