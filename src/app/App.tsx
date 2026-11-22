@@ -17,13 +17,15 @@ import { Workout } from "./screens/Workout";
 import { ExerciseProgress } from "./screens/ExerciseProgress";
 import { Exercises } from "./screens/Exercises";
 import { Routines } from "./screens/Routines";
+import { Body } from "./screens/Body";
+import { Profile } from "./screens/Profile";
 import { draftFromSession, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
 import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 
 type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
-  | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" };
+  | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" } | { name: "profile" };
 
 export function App() {
   const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
@@ -118,19 +120,13 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
       )}
       {screen.name === "exercise" && <ExerciseProgress exerciseId={screen.id} onBack={() => setScreen({ name: "gym" })} />}
       {screen.name === "body" && (
-        <main className="screen">
-          <header className="screen-header"><h1>Body</h1></header>
-          <section className="card">
-            <p className="muted small" style={{ margin: 0 }}>Weight, targets and body stats arrive in a later update.</p>
-          </section>
-          <section className="card">
-            <button className="list-row" onClick={() => setScreen({ name: "settings" })}>
-              <span>Settings</span>
-              <span className="muted">›</span>
-            </button>
-          </section>
-        </main>
+        <Body
+          onOpenProfile={() => setScreen({ name: "profile" })}
+          onOpenSettings={() => setScreen({ name: "settings" })}
+          onOpenTargets={() => setScreen({ name: "targets" })}
+        />
       )}
+      {screen.name === "profile" && <Profile onBack={() => setScreen({ name: "body" })} />}
       {screen.name === "settings" && (
         <Settings
           config={config}
@@ -143,6 +139,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
             { label: "Exercises", onOpen: () => setScreen({ name: "exercises" }) },
             { label: "Routines", onOpen: () => setScreen({ name: "routines" }) },
             { label: "Targets", onOpen: () => setScreen({ name: "targets" }) },
+            { label: "Profile", onOpen: () => setScreen({ name: "profile" }) },
           ]}
         />
       )}
@@ -166,16 +163,5 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
         <BottomNav current={tab} onTab={(t) => setScreen({ name: t })} onAdd={() => setScreen({ name: "new" })} />
       )}
     </>
-  );
-}
-
-function Placeholder({ title }: { title: string }) {
-  return (
-    <main className="screen">
-      <header className="screen-header"><h1>{title}</h1></header>
-      <section className="card">
-        <p className="muted small" style={{ margin: 0 }}>Coming in a later update.</p>
-      </section>
-    </main>
   );
 }
