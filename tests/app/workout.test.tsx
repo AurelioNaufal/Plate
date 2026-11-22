@@ -165,3 +165,37 @@ test("finishing with unticked numbers asks first, then clears the draft", async 
   expect(onDone).toHaveBeenCalled();
   expect(loadDraft()).toBeNull();
 });
+
+describe("resuming checks the Sheet", () => {
+  const resumed = (): Draft => ({
+    ...draft(),
+    exercises: [{ exerciseId: "bench", sets: [
+      { id: "w1", weight: "40", reps: "10", done: true },
+      { id: "w2", weight: "45", reps: "8", done: false },
+    ] }],
+  });
+
+  test("a ticked set the Sheet doesn't have is sent again", () => {
+    render(<Workout draft={resumed()} onDone={() => {}} />);
+    expect(apply).toHaveBeenCalledWith([
+      { tab: "Workouts", row: { ID: "w1", SessionID: "s1", Date: "2026-11-16", ExerciseID: "bench", SetNumber: 1, WeightKg: 40, Reps: 10, Done: true } },
+    ]);
+  });
+
+  test("a ticked set the Sheet has with other numbers is sent again; one that matches is left alone", () => {
+    const stored = (WeightKg: number): Row => ({ ID: "w1", SessionID: "s1", Date: "2026-11-16", ExerciseID: "bench", SetNumber: 1, WeightKg, Reps: 10, Done: true });
+    data.current = { ...data.current, rows: { ...(data.current.rows as object), Workouts: [...before, stored(40)] } };
+    const { unmount } = render(<Workout draft={resumed()} onDone={() => {}} />);
+    expect(apply).not.toHaveBeenCalled();
+    unmount();
+    data.current = { ...data.current, rows: { ...(data.current.rows as object), Workouts: [...before, stored(35)] } };
+    render(<Workout draft={resumed()} onDone={() => {}} />);
+    expect(apply).toHaveBeenCalledWith([{ tab: "Workouts", row: expect.objectContaining({ ID: "w1", WeightKg: 40 }) }]);
+  });
+
+  test("an unticked set still in the Sheet is removed", () => {
+    data.current = { ...data.current, rows: { ...(data.current.rows as object), Workouts: [...before, { ID: "w2", SessionID: "s1", Date: "2026-11-16", ExerciseID: "bench", SetNumber: 2, WeightKg: 45, Reps: 8, Done: true }, { ID: "w1", SessionID: "s1", Date: "2026-11-16", ExerciseID: "bench", SetNumber: 1, WeightKg: 40, Reps: 10, Done: true }] } };
+    render(<Workout draft={resumed()} onDone={() => {}} />);
+    expect(apply).toHaveBeenCalledWith([{ tab: "Workouts", removeId: "w2" }]);
+  });
+});

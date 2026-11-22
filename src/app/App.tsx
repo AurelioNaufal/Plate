@@ -20,7 +20,7 @@ import { Routines } from "./screens/Routines";
 import { Body } from "./screens/Body";
 import { Profile } from "./screens/Profile";
 import { TargetSuggestion } from "./components/TargetSuggestion";
-import { draftFromSession, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
+import { draftFromSession, draftToResume, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
 import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 
@@ -69,7 +69,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
 
   /** Starts a routine (or a blank workout) unless one is already in progress on this phone. */
   function startWorkout(routineId: string | null) {
-    const existing = loadDraft();
+    const existing = draftToResume(todayTaipei());
     if (existing) return setScreen({ name: "workout", draft: existing });
     const routine = routineId ? (rows.Routines ?? []).find((r) => r.ID === routineId) ?? null : null;
     const d = newDraft(routine, rows.Exercises ?? [], rows.Workouts ?? [], todayTaipei(), () => crypto.randomUUID());

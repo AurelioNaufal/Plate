@@ -4,7 +4,7 @@ import { todayTaipei, weekday } from "../../shared/dates";
 import { formatWeekdays, parseIdList, parseWeekdays, routinesForDay, sessionsFrom, setLabel, type Session } from "../../shared/gym";
 import type { Row } from "../../shared/schema";
 import { formatShortDay } from "../format";
-import { loadDraft } from "../workoutDraft";
+import { clearDraft, loadDraft } from "../workoutDraft";
 
 type Props = {
   today?: string;
@@ -26,8 +26,9 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
     .filter((r) => parseWeekdays(r.Weekdays).length > 0 && !todays.includes(r))
     .sort((a, b) => String(a.Name ?? "").localeCompare(String(b.Name ?? "")));
   const sessions = useMemo(() => sessionsFrom(rows.Workouts ?? []).slice(0, 10), [rows.Workouts]);
-  const draft = loadDraft();
+  const [draft, setDraft] = useState(() => loadDraft());
   const [open, setOpen] = useState<string | null>(null);
+  const draftToday = draft !== null && draft.date === today;
 
   const nameOf = (id: unknown) => names.get(String(id)) ?? "Deleted exercise";
   const count = (r: Row) => parseIdList(r.ExerciseIDs).length;
@@ -43,13 +44,21 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
 
       {draft && (
         <section className="card" aria-label="Unfinished workout">
-          <div className="row-between">
-            <div>
+          {draftToday ? (
+            <div className="row-between">
               <h2>Workout in progress</h2>
-              <div className="small muted">Started {formatShortDay(draft.date)}</div>
+              <button className="btn btn-primary" onClick={onResume}>Continue workout</button>
             </div>
-            <button className="btn btn-primary" onClick={onResume}>Continue workout</button>
-          </div>
+          ) : (
+            <>
+              <h2>{`Unfinished workout from ${formatShortDay(draft.date)}`}</h2>
+              <p className="small muted" style={{ margin: 0 }}>Its ticked sets are saved. Starting a new workout today closes it.</p>
+              <div className="grid-2">
+                <button className="btn btn-secondary" onClick={() => { clearDraft(); setDraft(null); }}>Finish it</button>
+                <button className="btn btn-secondary" onClick={onResume}>Continue it</button>
+              </div>
+            </>
+          )}
         </section>
       )}
 
@@ -98,7 +107,15 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
         ) : (
           <div className="list">
             {sessions.map((s) => (
-              <SessionRow key={s.id} session={s} nameOf={nameOf} open={open === s.id} onToggle={() => setOpen(open === s.id ? null : s.id)} onEdit={() => onEditSession(s.id)} />
+              <SessionRow
+                key={s.id}
+                session={s}
+                nameOf={nameOf}
+                open={open === s.id}
+                onToggle={() => setOpen(open === s.id ? null : s.id)}
+                onEdit={() => onEditSession(s.id)}
+                editBlocked={draftToday && draft?.sessionId !== s.id}
+              />
             ))}
           </div>
         )}
@@ -122,7 +139,9 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
   );
 }
 
-function SessionRow({ session, nameOf, open, onToggle, onEdit }: { session: Session; nameOf(id: unknown): string; open: boolean; onToggle(): void; onEdit(): void }) {
+function SessionRow({ session, nameOf, open, onToggle, onEdit, editBlocked }: {
+  session: Session; nameOf(id: unknown): string; open: boolean; onToggle(): void; onEdit(): void; editBlocked: boolean;
+}) {
   const byExercise = new Map<string, Row[]>();
   for (const r of session.sets) byExercise.set(String(r.ExerciseID), [...(byExercise.get(String(r.ExerciseID)) ?? []), r]);
   const summary = `${formatShortDay(session.date)} · ${[...byExercise.keys()].map(nameOf).join(", ")} · ${session.sets.length} ${session.sets.length === 1 ? "set" : "sets"}`;
@@ -137,7 +156,8 @@ function SessionRow({ session, nameOf, open, onToggle, onEdit }: { session: Sess
           {[...byExercise].map(([id, sets]) => (
             <span key={id} className="small">{`${nameOf(id)}: ${sets.map(setLabel).join(" · ")}`}</span>
           ))}
-          <button className="btn-link" style={{ alignSelf: "flex-start" }} onClick={onEdit}>Edit this workout</button>
+          <button className="btn-link" style={{ alignSelf: "flex-start" }} onClick={onEdit} disabled={editBlocked}>Edit this workout</button>
+          {editBlocked && <span className="small muted">Finish today's workout first.</span>}
         </div>
       )}
     </div>

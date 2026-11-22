@@ -46,6 +46,32 @@ export function Workout({ draft: initial, onDone, onLeave }: Props) {
 
   useEffect(() => saveDraft(draft), [draft]);
 
+  // On opening (a resumed or edited workout), make the Sheet match the ticks:
+  // a ticked set the Sheet lacks, or has with other numbers, is sent again
+  // (an earlier save may have failed before the app closed); an unticked set
+  // still in the Sheet is removed. Upserts are by ID, so nothing doubles.
+  useEffect(() => {
+    const stored = new Map((rows.Workouts ?? []).map((r) => [String(r.ID), r]));
+    const changes: Change[] = [];
+    for (const ex of initial.exercises) {
+      ex.sets.forEach((s, i) => {
+        const have = stored.get(s.id);
+        if (!s.done) {
+          if (have) changes.push({ tab: "Workouts", removeId: s.id });
+          return;
+        }
+        const p = parseSet(s);
+        if (!p.ok) return;
+        const want = rowFor(ex.exerciseId, s, i + 1, p);
+        const same = have && (["SessionID", "Date", "ExerciseID", "SetNumber", "WeightKg", "Reps"] as const).every((k) => (have[k] ?? null) === want[k]);
+        if (!same) changes.push({ tab: "Workouts", row: want });
+      });
+    }
+    if (changes.length) void apply(changes);
+    // Once, when the workout opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const rowFor = (exerciseId: string, s: DraftSet, setNumber: number, p: { weightKg: number | null; reps: number | null }): Row => ({
     ID: s.id, SessionID: draft.sessionId, Date: draft.date, ExerciseID: exerciseId, SetNumber: setNumber, WeightKg: p.weightKg, Reps: p.reps, Done: true,
   });

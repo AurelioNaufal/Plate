@@ -73,18 +73,33 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
   const settle = (id: string, error?: string) =>
     setPending((prev) => (error ? prev.map((p) => (p.id === id ? { ...p, error } : p)) : prev.filter((p) => p.id !== id)));
 
+  // Requests go to the server one at a time, in the order they were made, so
+  // a quick tick-then-untick can't arrive the other way round.
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  // Each row's local version; a reply only updates rows nobody changed since
+  // that request was made.
+  const versions = useRef(new Map<string, number>());
+
   const send = useCallback(
-    async (op: PendingOp) => {
-      if (!api) return;
+    (op: PendingOp): Promise<void> => {
+      if (!api) return Promise.resolve();
       setPending((prev) => [...prev.filter((p) => p.id !== op.id), { ...op, error: undefined }]);
-      try {
-        const { saved } = await api.batch(op.changes);
-        // The server fills in CreatedAt and the like; keep its copy.
-        if (saved.length) setRows((prev) => applyChanges(prev, saved));
-        settle(op.id);
-      } catch (e) {
-        settle(op.id, e instanceof Error ? e.message : String(e));
-      }
+      const sentAt = new Map(op.changes.map((c) => [changeId(c), versions.current.get(changeId(c)) ?? 0]));
+      const run = async () => {
+        try {
+          const { saved } = await api.batch(op.changes);
+          // The server fills in CreatedAt and the like; keep its copy unless
+          // the row has been changed here since.
+          const fresh = saved.filter((c) => (versions.current.get(changeId(c)) ?? 0) === (sentAt.get(changeId(c)) ?? 0));
+          if (fresh.length) setRows((prev) => applyChanges(prev, fresh));
+          settle(op.id);
+        } catch (e) {
+          settle(op.id, e instanceof Error ? e.message : String(e));
+        }
+      };
+      const next = queue.current.then(run);
+      queue.current = next;
+      return next;
     },
     [api],
   );
@@ -93,6 +108,7 @@ export function DataProvider({ api, children }: { api: Api | null; children: Rea
     async (changes: Change[]) => {
       if (changes.length === 0) return;
       const full = changes.map((c): Change => ("row" in c && !c.row.ID ? { ...c, row: { ...c.row, ID: newId() } } : c));
+      for (const c of full) versions.current.set(changeId(c), (versions.current.get(changeId(c)) ?? 0) + 1);
       setRows((prev) => applyChanges(prev, full));
       // A failed earlier save of the same rows is superseded: retrying it
       // later would put the older values back over these.

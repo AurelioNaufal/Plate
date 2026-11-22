@@ -121,14 +121,19 @@ test("two quick saves of the same row keep their own pending entries, so a failu
   const { result } = renderHook(() => useData(), { wrapper: wrap(api) });
   await waitFor(() => expect(result.current.status).toBe("ready"));
 
-  let first!: Promise<void>;
+  // The second waits for the first (requests go out one at a time).
+  let first!: Promise<void>, second!: Promise<void>;
   act(() => {
     first = result.current.apply([{ tab: "Meals", row: { ID: "m1", Name: "A" } }]);
   });
-  await act(() => result.current.apply([{ tab: "Meals", row: { ID: "m1", Name: "B" } }]));
+  act(() => {
+    second = result.current.apply([{ tab: "Meals", row: { ID: "m1", Name: "B" } }]);
+  });
+  await act(async () => {}); // let the first request start
   await act(async () => {
     releaseFirst();
     await first;
+    await second;
   });
   expect(result.current.pending).toHaveLength(1);
   expect(result.current.pending[0].error).toContain("Can't reach");
@@ -213,4 +218,35 @@ test("remove drops the row locally and calls the API", async () => {
   await act(() => result.current.remove("Transactions", "t1"));
   expect(result.current.rows.Transactions.map((r) => r.ID)).toEqual(["t2"]);
   expect(removed).toEqual(["t1"]);
+});
+
+test("requests go out one at a time, and a late reply can't bring back a row changed since", async () => {
+  let releaseFirst!: () => void;
+  const api = fakeApi();
+  api.batch = async (changes) => {
+    api.batches.push(changes);
+    if (api.batches.length === 1) await new Promise<void>((r) => (releaseFirst = r));
+    const saved = changes.filter((c): c is { tab: "Workouts"; row: Row } => "row" in c).map((c) => ({ tab: c.tab, row: c.row }));
+    return { saved, removed: changes.length - saved.length };
+  };
+  const { result } = renderHook(() => useData(), { wrapper: wrap(api) });
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+
+  let tick!: Promise<void>, untick!: Promise<void>;
+  act(() => {
+    tick = result.current.apply([{ tab: "Workouts", row: { ID: "w1", Reps: 10 } }]);
+  });
+  act(() => {
+    untick = result.current.apply([{ tab: "Workouts", removeId: "w1" }]);
+  });
+  await act(async () => {}); // let the first request start
+  // The untick waits for the tick to finish, so the server sees them in tap order.
+  expect(api.batches).toHaveLength(1);
+  await act(async () => {
+    releaseFirst();
+    await tick;
+    await untick;
+  });
+  expect(api.batches.map((b) => ("row" in b[0] ? "upsert" : "remove"))).toEqual(["upsert", "remove"]);
+  expect(result.current.rows.Workouts).toEqual([]);
 });

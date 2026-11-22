@@ -41,6 +41,19 @@ export function clearDraft(): void {
   }
 }
 
+/**
+ * The draft "Start workout" should continue: today's, if any. A draft from an
+ * earlier day (closed without Finish) is cleared; its ticked sets are already
+ * in the Sheet, and reusing it would log today's sets into that day.
+ */
+export function draftToResume(today: string): Draft | null {
+  const d = loadDraft();
+  if (!d) return null;
+  if (d.date === today) return d;
+  clearDraft();
+  return null;
+}
+
 const show = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? String(v) : "");
 
 /** Sets to start an exercise with: last time's, not yet ticked, or 3 empty ones. */

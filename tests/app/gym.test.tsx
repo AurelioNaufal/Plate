@@ -88,3 +88,22 @@ test("exercises link to their progress", async () => {
   await userEvent.click(list.getByRole("button", { name: /Bench press/ }));
   expect(p.onOpenExercise).toHaveBeenCalledWith("bench");
 });
+
+test("an unfinished workout from an earlier day says so and can be finished", async () => {
+  localStorage.setItem("plate.workoutDraft", JSON.stringify({ sessionId: "s9", date: "2026-11-12", routineId: "push", exercises: [] }));
+  render(<Gym {...props()} />);
+  expect(screen.getByText("Unfinished workout from Thu 12 Nov")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Finish it" }));
+  expect(screen.queryByText("Unfinished workout from Thu 12 Nov")).not.toBeInTheDocument();
+  expect(localStorage.getItem("plate.workoutDraft")).toBeNull();
+});
+
+test("an old workout can't be edited while today's is in progress", async () => {
+  localStorage.setItem("plate.workoutDraft", JSON.stringify({ sessionId: "s9", date: "2026-11-16", routineId: "push", exercises: [] }));
+  const p = props();
+  render(<Gym {...p} />);
+  const recent = within(screen.getByRole("region", { name: "Recent workouts" }));
+  await userEvent.click(recent.getByRole("button", { name: /Mon 16 Nov/ }));
+  expect(recent.getByRole("button", { name: "Edit this workout" })).toBeDisabled();
+  expect(recent.getByText("Finish today's workout first.")).toBeInTheDocument();
+});

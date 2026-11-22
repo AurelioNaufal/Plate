@@ -67,3 +67,13 @@ describe("newDraft", () => {
     ]);
   });
 });
+
+import { draftToResume } from "../../src/app/workoutDraft";
+
+test("a draft from an earlier day isn't resumed by Start workout", () => {
+  saveDraft({ ...draft, date: "2026-11-16" });
+  expect(draftToResume("2026-11-16")?.sessionId).toBe("s1");
+  expect(draftToResume("2026-11-19")).toBeNull();
+  // Its ticked sets are already in the Sheet; the stale draft is cleared.
+  expect(loadDraft()).toBeNull();
+});

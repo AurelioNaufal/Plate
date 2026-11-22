@@ -85,3 +85,15 @@ Do these once, in order, in the Apps Script editor (the project Claude pushed th
 **Adding a subscription** (Claude, YouTube Premium, …): in Plate, **Body → Settings → Recurring charges → Add recurring charge**. Choose **Monthly**, set the day your card is billed, and set the start date to your **next** billing day so past months aren't added. You can also type a row into the Recurring tab. Leave ID blank, use `monthly` or `weekly`, and give Weekday as 0 = Sunday … 6 = Saturday or MonthDay as 1–31.
 
 **Moving to your real Sheet later:** after `useRealSheet` and `runMigration`, repeat steps 2–4 there. `useRealSheet` already runs `setup` for you.
+
+## Plan 3 update, stage 1 — gym, body, targets
+
+Do these once, in the Apps Script editor, after Claude has pushed the new code. Your Web app URL and token stay the same.
+
+1. **Upload the new version:** **Deploy → Manage deployments → ✏ → Version: New version → Deploy**.
+2. **Run `setup`.**
+   *You should see:* the **Exercises** tab has 11 starter exercises and the **Routines** tab has Push (Mon, Thu), Pull (Tue, Fri) and Anytime (leg extension, leg curl, abs). Tabs you already filled, or emptied on purpose, are left alone.
+3. **In Plate:** Body → Profile. Enter your height, age and sex (used only for BMI and the calorie estimate). Then log today's weight on the Body tab.
+   *You should see:* your BMI, the weight chart, and on Targets an "Estimated maintenance" line with a **Use estimate** button. If your weight trend suggests new targets, a card offers them; nothing changes until you tap **Update**.
+
+**Logging a workout:** Gym → **Start workout** (or Start blank workout). Each exercise shows last time's sets, already filled in. Tick ✓ each set as you finish it: ticked sets are saved to the Sheet straight away. If you close the app mid-workout, Gym → **Continue workout** picks up where you left off. Tap **Finish workout** at the end.
