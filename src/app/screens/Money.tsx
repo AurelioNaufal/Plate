@@ -80,8 +80,9 @@ export function Money({ today = todayTaipei(), period: given, onPeriodChange, on
   const mealsById = useMemo(() => new Map((rows.Meals ?? []).map((m) => [String(m.ID), m])), [rows.Meals]);
   // Every row in a pending request shows "saving…", not just the first one.
   const pendingIds = new Set(pending.flatMap((p) => p.changes.map(changeId)));
-  // Budgets are monthly: show the month the period ends in.
-  const budgetMonth = monthKey(period.end);
+  // Budgets are monthly: the month the period ends in, but never past this month
+  // (a week running into next month, or this year, still shows this month).
+  const budgetMonth = monthKey(period.end > today ? today : period.end);
   const budgets = useMemo(
     () => budgetStatus(rows.Budgets ?? [], txs, budgetMonth, rows.Categories ?? []),
     [rows.Budgets, txs, budgetMonth, rows.Categories],

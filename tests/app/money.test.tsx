@@ -87,3 +87,8 @@ test("the income card breaks income down by category", () => {
   expect(inc).toHaveTextContent("Part-Time Jobs");
   expect(inc).toHaveTextContent("100%");
 });
+
+test("budgets follow the current month, not the week's spill into the next one", () => {
+  render(<Money today="2026-11-30" onOpen={() => {}} onOpenCategory={() => {}} />);
+  expect(within(screen.getByRole("region", { name: "Budgets" })).getByText("November 2026")).toBeInTheDocument();
+});

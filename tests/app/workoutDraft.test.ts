@@ -94,3 +94,11 @@ describe("startChoice", () => {
     expect(startChoice(d("pull", true), null)).toBe("ask");
   });
 });
+
+test("an edit of a finished session is never resumed by Start: its sets are already saved", () => {
+  const session = sessionsFrom([{ ID: "a", SessionID: "s1", Date: "2026-11-16", ExerciseID: "bench", SetNumber: 1, WeightKg: 40, Reps: 10, Done: true }])[0];
+  const d = draftFromSession(session);
+  expect(d.editing).toBe(true);
+  expect(startChoice(d, null)).toBe("replace");
+  expect(startChoice(d, "push")).toBe("replace");
+});

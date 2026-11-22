@@ -19,7 +19,7 @@ type Props = {
 
 const bySortOrder = (a: Row, b: Row) => Number(a.SortOrder ?? 0) - Number(b.SortOrder ?? 0);
 
-export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, onEditSession, asking = null }: Props) {
+export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, onEditSession, asking }: Props) {
   const { rows } = useData();
   const exercises = useMemo(() => [...(rows.Exercises ?? [])].sort(bySortOrder), [rows.Exercises]);
   const names = useMemo(() => new Map(exercises.map((e) => [String(e.ID), String(e.Name ?? "")])), [exercises]);
@@ -33,7 +33,7 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
   const [open, setOpen] = useState<string | null>(null);
   const draftToday = draft !== null && draft.date === today;
   // undefined: no question; null: a blank workout was tapped.
-  const [switchTo, setSwitchTo] = useState<string | null | undefined>(asking ?? undefined);
+  const [switchTo, setSwitchTo] = useState<string | null | undefined>(asking);
   const routineName = (id: string | null | undefined) =>
     id ? String(routines.find((r) => r.ID === id)?.Name ?? "Workout") : "Blank workout";
 
@@ -59,7 +59,7 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
         <section className="card" aria-label="Unfinished workout">
           {draftToday ? (
             <div className="row-between">
-              <h2>{`${draft.routineId ? routineName(draft.routineId) : "Blank workout"} in progress`}</h2>
+              <h2>{draft.editing ? "Editing a finished workout" : `${draft.routineId ? routineName(draft.routineId) : "Blank workout"} in progress`}</h2>
               <button className="btn btn-primary" onClick={onResume}>Continue workout</button>
             </div>
           ) : (
@@ -78,10 +78,10 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
       {switchTo !== undefined && draftToday && (
         <section className="card" aria-label="Switch workout">
           <span>
-            {`Your ${routineName(draft.routineId)} workout has ${savedSetCount(draft)} saved set${savedSetCount(draft) === 1 ? "" : "s"}. Start ${routineName(switchTo)} instead?`}
+            {`Your ${draft.routineId ? `${routineName(draft.routineId)} workout` : "blank workout"} has ${savedSetCount(draft)} saved set${savedSetCount(draft) === 1 ? "" : "s"}. Start ${switchTo ? routineName(switchTo) : "a blank workout"} instead?`}
           </span>
           <span className="small muted">Its saved sets stay in your history.</span>
-          <div className="grid-2">
+          <div className="stack">
             <button className="btn btn-secondary" onClick={() => setSwitchTo(undefined)}>{`Keep ${routineName(draft.routineId)}`}</button>
             <button className="btn btn-primary" onClick={() => onStart(switchTo, true)}>{`Start ${routineName(switchTo)}`}</button>
           </div>

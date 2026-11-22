@@ -10,6 +10,8 @@ export type Draft = {
   date: string;
   routineId: string | null;
   exercises: { exerciseId: string; sets: DraftSet[] }[];
+  /** Opened from Recent workouts to fix a finished session. */
+  editing?: boolean;
 };
 
 const KEY = "plate.workoutDraft";
@@ -84,7 +86,7 @@ export function draftFromSession(session: Session): Draft {
     if (!ex) exercises.push((ex = { exerciseId, sets: [] }));
     ex.sets.push({ id: String(r.ID), weight: show(r.WeightKg), reps: show(r.Reps), done: true });
   }
-  return { sessionId: session.id, date: session.date, routineId: null, exercises };
+  return { sessionId: session.id, date: session.date, routineId: null, exercises, editing: true };
 }
 
 /**
@@ -95,6 +97,8 @@ export function draftFromSession(session: Session): Draft {
  */
 export function startChoice(existing: Draft | null, routineId: string | null): "new" | "resume" | "replace" | "ask" {
   if (!existing) return "new";
+  // An edit of a finished workout: its sets are all saved, and Start must never add to it.
+  if (existing.editing) return "replace";
   if (existing.routineId === routineId) return "resume";
   return savedSetCount(existing) > 0 ? "ask" : "replace";
 }

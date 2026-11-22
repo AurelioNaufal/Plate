@@ -149,6 +149,8 @@ h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .review-list { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .review-list > div { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .review-list dd { margin: 0; font-size: 14px; }
+.stack { display: flex; flex-direction: column; gap: 8px; }
+.stack > .btn { width: 100%; white-space: normal; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; table-layout: fixed; }
 .data-table caption { text-align: left; caption-side: bottom; padding-top: 6px; }
 .data-table th, .data-table td { padding: 7px 0; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

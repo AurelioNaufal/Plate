@@ -156,3 +156,43 @@ describe("starting another routine while one is open", () => {
     expect(screen.getByRole("region", { name: "Switch workout" })).toHaveTextContent("Start Push instead?");
   });
 });
+
+describe("stage 3 review fixes", () => {
+  const draftFor = (routineId: string | null, extra: Record<string, unknown> = {}) => ({
+    sessionId: "sx", date: "2026-11-16", routineId,
+    exercises: [{ exerciseId: "lat", sets: [{ id: "y1", weight: "40", reps: "10", done: true }, { id: "y2", weight: "45", reps: "8", done: true }] }],
+    ...extra,
+  });
+
+  test("a blank workout sent from Today asks too", () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(draftFor("push")));
+    render(<Gym {...props({ asking: null })} />);
+    const ask = screen.getByRole("region", { name: "Switch workout" });
+    expect(ask).toHaveTextContent("Your Push workout has 2 saved sets. Start a blank workout instead?");
+  });
+
+  test("an open blank workout reads naturally in the question", async () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(draftFor(null)));
+    render(<Gym {...props()} />);
+    await userEvent.click(within(screen.getByRole("region", { name: "Today's workout" })).getByRole("button", { name: "Start workout" }));
+    expect(screen.getByRole("region", { name: "Switch workout" })).toHaveTextContent("Your blank workout has 2 saved sets. Start Push instead?");
+  });
+
+  test("the question's buttons are stacked full width, so long names never overlap", async () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(draftFor("pull")));
+    render(<Gym {...props()} />);
+    await userEvent.click(within(screen.getByRole("region", { name: "Today's workout" })).getByRole("button", { name: "Start workout" }));
+    const keep = within(screen.getByRole("region", { name: "Switch workout" })).getByRole("button", { name: "Keep Pull" });
+    expect(keep.parentElement).toHaveClass("stack");
+  });
+
+  test("an edit of a finished workout is labelled, and Start opens a new workout instead of adding to it", async () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(draftFor(null, { editing: true })));
+    const p = props();
+    render(<Gym {...p} />);
+    expect(within(screen.getByRole("region", { name: "Unfinished workout" })).getByText("Editing a finished workout")).toBeInTheDocument();
+    await userEvent.click(within(screen.getByRole("region", { name: "Today's workout" })).getByRole("button", { name: "Start workout" }));
+    expect(screen.queryByRole("region", { name: "Switch workout" })).toBeNull();
+    expect(p.onStart).toHaveBeenCalledWith("push");
+  });
+});
