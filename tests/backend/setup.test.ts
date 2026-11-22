@@ -1,4 +1,4 @@
-import { seedCategories, seedQuickAdd, seedSavedFoods, seedRecurring, summaryFormulas, planSeeds } from "../../src/backend/setup";
+import { seedCategories, seedQuickAdd, seedSavedFoods, seedRecurring, seedExercises, seedRoutines, summaryFormulas, planSeeds } from "../../src/backend/setup";
 
 describe("planSeeds", () => {
   let k = 0;
@@ -94,5 +94,48 @@ describe("summaryFormulas", () => {
     expect(f.E3).toContain('"expense"');
     expect(f.E4).toContain('"income"');
     expect(f.E5).toBe("=E4-E3");
+  });
+});
+
+describe("gym starter rows", () => {
+  let g = 0;
+  const gid = () => `g${++g}`;
+
+  test("seedExercises has the 11 starters with muscle groups", () => {
+    const rows = seedExercises(gid);
+    expect(rows).toHaveLength(11);
+    expect(rows[8]).toMatchObject({ Name: "Abs", MuscleGroup: "Core", SortOrder: 9 });
+    expect(rows[0]).toMatchObject({ Name: "Lat pulldown", MuscleGroup: "Back", SortOrder: 1 });
+  });
+
+  test("seedRoutines points Push, Pull and Anytime at the exercises by name", () => {
+    const ex = seedExercises(gid);
+    const id = (name: string) => ex.find((e) => e.Name === name)!.ID;
+    const rows = seedRoutines(ex, gid);
+    expect(rows.map((r) => [r.Name, r.Weekdays])).toEqual([["Push", "1,4"], ["Pull", "2,5"], ["Anytime", ""]]);
+    expect(rows[0].ExerciseIDs).toBe(["Bench press", "Incline bench press", "Shoulder press", "Pec deck (chest)", "Tricep"].map(id).join(","));
+    expect(String(rows[1].ExerciseIDs).split(",")).toHaveLength(3);
+    expect(rows[2].ExerciseIDs).toBe(["Leg extension", "Leg curl", "Abs"].map(id).join(","));
+  });
+
+  test("seedRoutines matches names in any case and skips missing ones", () => {
+    const rows = seedRoutines([{ ID: "x1", Name: "BENCH PRESS" }], gid);
+    expect(rows[0].ExerciseIDs).toBe("x1");
+    expect(rows[1].ExerciseIDs).toBe("");
+  });
+
+  test("planSeeds writes routines that use the exercises written in the same run", () => {
+    const plan = planSeeds([{ tab: "Exercises", hasRows: false }, { tab: "Routines", hasRows: false }], [], "2026-11-22", gid);
+    const ex = plan.writes.find((w) => w.tab === "Exercises")!.rows;
+    const routines = plan.writes.find((w) => w.tab === "Routines")!.rows;
+    const exIds = new Set(ex.map((e) => e.ID));
+    expect(String(routines[0].ExerciseIDs).split(",").every((i) => exIds.has(i))).toBe(true);
+  });
+
+  test("planSeeds uses existing exercises when only Routines is empty", () => {
+    const existing = { Exercises: [{ ID: "old-bench", Name: "Bench press" }] };
+    const plan = planSeeds([{ tab: "Exercises", hasRows: true }, { tab: "Routines", hasRows: false }], [], "2026-11-22", gid, existing);
+    expect(plan.writes.map((w) => w.tab)).toEqual(["Routines"]);
+    expect(plan.writes[0].rows[0].ExerciseIDs).toBe("old-bench");
   });
 });

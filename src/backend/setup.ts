@@ -1,5 +1,5 @@
 import { TABS, TAB_NAMES, DEFAULT_CATEGORIES, columnNames, type Row, type TabName } from "../shared/schema";
-import { valuesForRow } from "./store";
+import { rowsFromValues, valuesForRow } from "./store";
 import { todayTaipei } from "../shared/dates";
 
 export function seedCategories(newId: () => string): Row[] {
@@ -42,11 +42,52 @@ export function seedRecurring(newId: () => string): Row[] {
   return [weeklySunday("Gym", 40, "Health"), weeklySunday("Laundry", 20, "Utilities")];
 }
 
-const SEEDS: [TabName, (id: () => string) => Row[]][] = [
+const EXERCISES: [string, string][] = [
+  ["Lat pulldown", "Back"],
+  ["Bench press", "Chest"],
+  ["Incline bench press", "Chest"],
+  ["Shoulder press", "Shoulders"],
+  ["Leg extension", "Legs"],
+  ["Leg curl", "Legs"],
+  ["Pec deck (chest)", "Chest"],
+  ["Pec deck (rear delt/back)", "Back"],
+  ["Abs", "Core"],
+  ["Tricep", "Arms"],
+  ["Bicep curl", "Arms"],
+];
+
+// Weekdays: 0 = Sunday. "Anytime" has no days: its exercises are offered in any session.
+const ROUTINES: [string, string, string[]][] = [
+  ["Push", "1,4", ["Bench press", "Incline bench press", "Shoulder press", "Pec deck (chest)", "Tricep"]],
+  ["Pull", "2,5", ["Lat pulldown", "Pec deck (rear delt/back)", "Bicep curl"]],
+  ["Anytime", "", ["Leg extension", "Leg curl", "Abs"]],
+];
+
+export function seedExercises(newId: () => string): Row[] {
+  return EXERCISES.map(([Name, MuscleGroup], i) => ({ ID: newId(), Name, MuscleGroup, SortOrder: i + 1 }));
+}
+
+/** The starter routines, pointing at exercises by name (any case); names not found are left out. */
+export function seedRoutines(exercises: Row[], newId: () => string): Row[] {
+  const byName = new Map(exercises.map((e) => [String(e.Name ?? "").trim().toLowerCase(), String(e.ID)]));
+  return ROUTINES.map(([Name, Weekdays, names]) => ({
+    ID: newId(),
+    Name,
+    Weekdays,
+    ExerciseIDs: names.map((n) => byName.get(n.toLowerCase())).filter((id): id is string => !!id).join(","),
+  }));
+}
+
+type Seed = (newId: () => string, context: { exercises: Row[] }) => Row[];
+
+// Order matters: Exercises before Routines, which point at them.
+const SEEDS: [TabName, Seed][] = [
   ["Categories", seedCategories],
   ["QuickAdd", seedQuickAdd],
   ["SavedFoods", seedSavedFoods],
   ["Recurring", seedRecurring],
+  ["Exercises", seedExercises],
+  ["Routines", (newId, { exercises }) => seedRoutines(exercises, newId)],
 ];
 
 /**
@@ -60,6 +101,7 @@ export function planSeeds(
   settings: Row[],
   today: string,
   newId: () => string,
+  existing: { Exercises: Row[] } = { Exercises: [] },
 ): { writes: { tab: TabName; rows: Row[] }[]; markers: Row[] } {
   const done = new Set(settings.map((r) => String(r.ID)));
   const writes: { tab: TabName; rows: Row[] }[] = [];
@@ -70,7 +112,9 @@ export function planSeeds(
     if (!seed || done.has(marker)) continue;
     markers.push({ ID: marker, Value: today });
     if (hasRows) continue;
-    let rows = seed(newId);
+    // Routines use the exercises written in this run, else the ones already in the Sheet.
+    const exercises = writes.find((w) => w.tab === "Exercises")?.rows ?? existing.Exercises;
+    let rows = seed(newId, { exercises });
     // Never start a starter charge in the past, which would back-fill it.
     if (tab === "Recurring") rows = rows.map((r) => ({ ...r, StartDate: String(r.StartDate) > today ? r.StartDate : today }));
     writes.push({ tab, rows });
@@ -151,11 +195,13 @@ export function setupSpreadsheet(ss: GoogleAppsScript.Spreadsheet.Spreadsheet, n
   const settingsValues = settingsSheet.getDataRange().getValues();
   const idCol = settingsValues[0].map((h) => String(h).trim()).indexOf("ID");
   const settings: Row[] = settingsValues.slice(1).map((line) => ({ ID: String(line[idCol] ?? "") }));
+  const exerciseSheet = ss.getSheetByName("Exercises")!;
   const plan = planSeeds(
     SEEDED_TABS.map((tab) => ({ tab, hasRows: ss.getSheetByName(tab)!.getLastRow() >= 2 })),
     settings,
     todayTaipei(),
     newId,
+    { Exercises: rowsFromValues("Exercises", exerciseSheet.getDataRange().getValues()) },
   );
   for (const { tab, rows } of plan.writes) {
     const sh = ss.getSheetByName(tab)!;

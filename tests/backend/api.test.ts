@@ -238,3 +238,42 @@ describe("list", () => {
     expect(b.ID).toBe(a.ID);
   });
 });
+
+describe("gym and body validation", () => {
+  const setRow = (over: Row = {}): Row => ({ ID: "w1", SessionID: "s1", Date: "2026-11-22", ExerciseID: "bench", SetNumber: 1, WeightKg: 40, Reps: 10, Done: true, ...over });
+  const up = (tab: string, row: Row, initial: Partial<Record<TabName, Row[]>> = {}) =>
+    setup(initial).call({ token: TOKEN, action: "upsert", tab, rows: [row] });
+
+  test("a set needs whole reps, a session, an exercise and a set number", () => {
+    expect(up("Workouts", setRow({ Reps: 2.5 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Workouts", setRow({ SessionID: null }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Workouts", setRow({ ExerciseID: "" }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Workouts", setRow({ SetNumber: 0 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Workouts", setRow({ WeightKg: -5 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Workouts", setRow({ Date: "22/11/2026" }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+  });
+
+  test("a bodyweight set with no weight is fine", () => {
+    expect(up("Workouts", setRow({ WeightKg: null, Reps: 15 })).ok).toBe(true);
+  });
+
+  test("body rows need a real weight when one is given", () => {
+    const body = (over: Row = {}): Row => ({ ID: "b1", Date: "2026-11-22", WeightKg: 60.2, BodyFatPct: null, WaistCm: null, ArmCm: null, ...over });
+    expect(up("Body", body()).ok).toBe(true);
+    expect(up("Body", body({ WeightKg: 0 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Body", body({ WeightKg: 600 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Body", body({ BodyFatPct: 120 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Body", body({ WaistCm: 0 }))).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+  });
+
+  test("exercise names are required and unique in any case", () => {
+    const initial = { Exercises: [{ ID: "e1", Name: "Bench press", MuscleGroup: "Chest", SortOrder: 1 }] };
+    expect(up("Exercises", { ID: "e2", Name: "bench PRESS" }, initial)).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
+    expect(up("Exercises", { ID: "e2", Name: " " }, initial)).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Exercises", { ID: "e1", Name: "Bench Press" }, initial).ok).toBe(true);
+  });
+
+  test("routines need a name", () => {
+    expect(up("Routines", { ID: "r1", Name: "", Weekdays: "1", ExerciseIDs: "" })).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+  });
+});

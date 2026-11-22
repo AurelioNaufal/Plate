@@ -203,6 +203,43 @@ function validate(tab: TabName, row: Row, others: Row[]) {
     if (row.Type !== "expense" && row.Type !== "income") fail("BAD_REQUEST", "Category type must be expense or income");
     assertUniqueCategory(name, String(row.Type), String(row.ID), others);
   }
+  if (tab === "Exercises") {
+    const name = typeof row.Name === "string" ? row.Name.trim() : "";
+    if (!name) fail("BAD_REQUEST", "Exercise name is required");
+    const clash = others.some((e) => e.ID !== row.ID && String(e.Name ?? "").trim().toLowerCase() === name.toLowerCase());
+    if (clash) fail("CONFLICT", `An exercise named "${name}" already exists`);
+  }
+  if (tab === "Routines") {
+    if (typeof row.Name !== "string" || !row.Name.trim()) fail("BAD_REQUEST", "Routine name is required");
+  }
+  if (tab === "Workouts") {
+    if (!row.SessionID) fail("BAD_REQUEST", "SessionID is required");
+    if (!row.ExerciseID) fail("BAD_REQUEST", "ExerciseID is required");
+    requireIsoDate(row.Date, "Date");
+    if (!isWholeAtLeast(row.SetNumber, 1)) fail("BAD_REQUEST", "SetNumber must be a whole number from 1");
+    if (row.Reps !== null && row.Reps !== undefined && !isWholeAtLeast(row.Reps, 0)) fail("BAD_REQUEST", "Reps must be a whole number");
+    if (!blankOrBetween(row.WeightKg, 0, 1000, true)) fail("BAD_REQUEST", "WeightKg must be 0 to 999");
+  }
+  if (tab === "Body") {
+    requireIsoDate(row.Date, "Date");
+    if (!blankOrBetween(row.WeightKg, 0, 500, false)) fail("BAD_REQUEST", "WeightKg must be above 0 and below 500");
+    if (!blankOrBetween(row.BodyFatPct, 0, 100, true, true)) fail("BAD_REQUEST", "BodyFatPct must be 0 to 100");
+    if (!blankOrBetween(row.WaistCm, 0, 1000, false)) fail("BAD_REQUEST", "WaistCm must be above 0");
+    if (!blankOrBetween(row.ArmCm, 0, 1000, false)) fail("BAD_REQUEST", "ArmCm must be above 0");
+  }
+}
+
+function requireIsoDate(v: unknown, field: string) {
+  if (typeof v !== "string" || !ISO_DATE.test(v) || !parseSheetDate(v)) fail("BAD_REQUEST", `${field} must be YYYY-MM-DD`);
+}
+
+const isWholeAtLeast = (v: unknown, min: number) => typeof v === "number" && Number.isInteger(v) && v >= min;
+
+/** Blank, or a number above `min` (or at it, when minOk) and below `max` (or at it, when maxOk). */
+function blankOrBetween(v: unknown, min: number, max: number, minOk: boolean, maxOk = false): boolean {
+  if (v === null || v === undefined) return true;
+  if (typeof v !== "number" || !Number.isFinite(v)) return false;
+  return (minOk ? v >= min : v > min) && (maxOk ? v <= max : v < max);
 }
 
 function assertUniqueCategory(name: string, type: string, id: string, categories: Row[]) {
