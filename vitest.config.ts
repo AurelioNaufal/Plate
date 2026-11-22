@@ -8,5 +8,9 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["tests/setup.ts"],
+    // Threads start faster than forked processes. With forks, a slow disk
+    // (WSL reading the Windows drive) timed out worker start-up and silently
+    // skipped whole test files.
+    pool: "threads",
   },
 });

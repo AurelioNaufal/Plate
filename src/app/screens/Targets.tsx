@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useData } from "../store";
 import { BackHeader } from "../components/BackHeader";
 import { getSetting, parseNutritionInput, roundKcal, roundProtein, targetsFrom } from "../../shared/meals";
+import { maintenanceKcal, profileFrom } from "../../shared/body";
+import { TargetSuggestion, useTrendKg } from "../components/TargetSuggestion";
 
 type Field = "protein" | "kcal";
 
@@ -11,6 +13,15 @@ export function Targets({ onBack }: { onBack(): void }) {
   const [protein, setProtein] = useState(String(targetsFrom(settings).protein));
   const [kcal, setKcal] = useState(getSetting(settings, "kcalTarget") ?? "");
   const [error, setError] = useState<{ field: Field; message: string }>();
+  const trendKg = useTrendKg();
+  const profile = profileFrom(settings);
+  const estimate = maintenanceKcal(profile, trendKg);
+  const missing =
+    profile.heightCm === null || profile.age === null || profile.sex === null
+      ? "Add height, age and sex in Profile for an estimate"
+      : trendKg === null
+        ? "Log your weight on the Body tab for an estimate"
+        : null;
 
   function submit() {
     const p = parseNutritionInput(protein);
@@ -41,8 +52,17 @@ export function Targets({ onBack }: { onBack(): void }) {
           <input value={kcal} onChange={(e) => { setKcal(e.target.value); setError(undefined); }} inputMode="numeric" aria-invalid={error?.field === "kcal"} aria-describedby={error?.field === "kcal" ? "kcal-error" : undefined} />
         </label>
         {errorFor("kcal")}
-        <p className="muted small" style={{ margin: 0 }}>Leave calories blank if you only want to track protein.</p>
+        {estimate !== null ? (
+          <div className="row-between">
+            <span className="small muted">{`Estimated maintenance: ${estimate.toLocaleString("en-US")} kcal`}</span>
+            <button className="btn-link" onClick={() => { setKcal(String(estimate)); setError(undefined); }}>Use estimate</button>
+          </div>
+        ) : (
+          <span className="small muted">{missing}</span>
+        )}
+        <p className="muted small" style={{ margin: 0 }}>Leave calories blank if you only want to track protein. Targets change only when you save or tap Update.</p>
       </section>
+      <TargetSuggestion onUpdated={(sug) => { setProtein(String(sug.protein)); if (sug.kcal !== null) setKcal(String(sug.kcal)); }} />
       <button className="btn btn-primary" onClick={submit}>Save</button>
     </main>
   );

@@ -90,3 +90,39 @@ test("coming up says when there is nothing", () => {
   renderToday();
   expect(screen.getByText("Nothing in the next 7 days")).toBeInTheDocument();
 });
+
+describe("Today's workout", () => {
+  const routines: Row[] = [
+    { ID: "push", Name: "Push", Weekdays: "1,4", ExerciseIDs: "bench,tricep" },
+    { ID: "any", Name: "Anytime", Weekdays: "", ExerciseIDs: "abs" },
+  ];
+  const sets = (date: string): Row[] =>
+    [1, 2, 3, 4, 5, 6].map((n) => ({ ID: `w${n}`, SessionID: "s1", Date: date, ExerciseID: n < 4 ? "bench" : "tricep", SetNumber: n, WeightKg: 40, Reps: 10, Done: true }));
+
+  test("on a routine day it offers to start that routine", async () => {
+    setRows({ Routines: routines, Workouts: [] });
+    const onStartWorkout = vi.fn();
+    render(<Today today="2026-11-19" onStartWorkout={onStartWorkout} />);
+    const card = within(screen.getByRole("region", { name: "Today's workout" }));
+    expect(card.getByText("Push")).toBeInTheDocument();
+    await userEvent.click(card.getByRole("button", { name: "Start workout" }));
+    expect(onStartWorkout).toHaveBeenCalledWith("push");
+  });
+
+  test("on a rest day it offers a blank workout", async () => {
+    setRows({ Routines: routines, Workouts: [] });
+    const onStartWorkout = vi.fn();
+    render(<Today today="2026-11-22" onStartWorkout={onStartWorkout} />);
+    expect(screen.getByText("No routine today")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Start blank workout" }));
+    expect(onStartWorkout).toHaveBeenCalledWith(null);
+  });
+
+  test("after a workout it shows what was done", async () => {
+    setRows({ Routines: routines, Workouts: sets("2026-11-19") });
+    const onOpenGym = vi.fn();
+    render(<Today today="2026-11-19" onOpenGym={onOpenGym} />);
+    await userEvent.click(screen.getByRole("button", { name: "Done today · 6 sets" }));
+    expect(onOpenGym).toHaveBeenCalled();
+  });
+});

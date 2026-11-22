@@ -19,6 +19,7 @@ import { Exercises } from "./screens/Exercises";
 import { Routines } from "./screens/Routines";
 import { Body } from "./screens/Body";
 import { Profile } from "./screens/Profile";
+import { TargetSuggestion } from "./components/TargetSuggestion";
 import { draftFromSession, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
 import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
@@ -95,6 +96,8 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onOpenMeal={(id) => setScreen({ name: "new", editMealId: id })}
           onOpenTargets={() => setScreen({ name: "targets" })}
           onOpenRecurring={() => setScreen({ name: "recurring", from: "today" })}
+          onStartWorkout={startWorkout}
+          onOpenGym={() => setScreen({ name: "gym" })}
         />
       )}
       {screen.name === "money" && <Money onOpen={(id) => setScreen({ name: "new", editId: id })} />}
@@ -124,6 +127,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onOpenProfile={() => setScreen({ name: "profile" })}
           onOpenSettings={() => setScreen({ name: "settings" })}
           onOpenTargets={() => setScreen({ name: "targets" })}
+          suggestion={<TargetSuggestion />}
         />
       )}
       {screen.name === "profile" && <Profile onBack={() => setScreen({ name: "body" })} />}

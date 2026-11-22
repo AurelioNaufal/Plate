@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useData } from "../store";
 import { periodFor, summarize } from "../../shared/aggregate";
-import { todayTaipei } from "../../shared/dates";
+import { todayTaipei, weekday } from "../../shared/dates";
+import { routinesForDay } from "../../shared/gym";
 import { formatNT } from "../../shared/money";
 import { dayNutrition, roundProtein, targetsFrom } from "../../shared/meals";
 import { upcomingCharges } from "../../shared/recurring";
@@ -14,6 +15,8 @@ type Props = {
   onOpenMeal?(id: string): void;
   onOpenTargets?(): void;
   onOpenRecurring?(): void;
+  onStartWorkout?(routineId: string | null): void;
+  onOpenGym?(): void;
 };
 
 const num = (n: number) => n.toLocaleString("en-US");
@@ -25,7 +28,7 @@ function nutritionText(m: Row): string {
   return parts.length ? parts.join(" · ") : "no nutrition";
 }
 
-export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpenRecurring }: Props) {
+export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpenRecurring, onStartWorkout, onOpenGym }: Props) {
   const { rows } = useData();
   const txs = rows.Transactions ?? [];
   const day = summarize(txs, { kind: "custom", start: today, end: today }, today);
@@ -34,6 +37,9 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
   const targets = targetsFrom(rows.Settings ?? []);
   const upcoming = upcomingCharges(rows.Recurring ?? [], today);
   const txById = useMemo(() => new Map(txs.map((t) => [String(t.ID), t])), [txs]);
+
+  const setsToday = (rows.Workouts ?? []).filter((w) => w.Date === today).length;
+  const todaysRoutines = routinesForDay(rows.Routines ?? [], weekday(today));
 
   const proteinLeft = roundProtein(targets.protein - nutrition.protein);
   const kcalLeft = targets.kcal === null ? null : targets.kcal - nutrition.kcal;
@@ -84,6 +90,28 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
           <div className="stat-label">This week (Sun–Sat)</div>
           <div className="stat-value">{formatNT(week.spent)}</div>
         </div>
+      </section>
+
+      <section className="card" aria-label="Today's workout">
+        <h2>Today's workout</h2>
+        {setsToday > 0 ? (
+          <button className="list-row" onClick={onOpenGym}>
+            <span style={{ fontWeight: 600 }}>{`Done today · ${setsToday} ${setsToday === 1 ? "set" : "sets"}`}</span>
+            <span className="muted" aria-hidden="true">›</span>
+          </button>
+        ) : todaysRoutines.length === 0 ? (
+          <div className="row-between">
+            <span className="muted">No routine today</span>
+            <button className="btn btn-secondary" onClick={() => onStartWorkout?.(null)}>Start blank workout</button>
+          </div>
+        ) : (
+          todaysRoutines.map((r) => (
+            <div key={String(r.ID)} className="row-between">
+              <span style={{ fontWeight: 600 }}>{String(r.Name)}</span>
+              <button className="btn btn-primary" onClick={() => onStartWorkout?.(String(r.ID))}>Start workout</button>
+            </div>
+          ))
+        )}
       </section>
 
       <section className="card" aria-label="Meals today">
