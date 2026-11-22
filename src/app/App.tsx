@@ -14,6 +14,7 @@ import { QuickAdd } from "./screens/QuickAdd";
 import { Recurring } from "./screens/Recurring";
 import { Gym } from "./screens/Gym";
 import { Workout } from "./screens/Workout";
+import { ExerciseProgress } from "./screens/ExerciseProgress";
 import { draftFromSession, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
 import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
@@ -113,7 +114,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
       {screen.name === "workout" && (
         <Workout key={screen.draft.sessionId} draft={screen.draft} onDone={() => setScreen({ name: "gym" })} onLeave={() => setScreen({ name: "gym" })} />
       )}
-      {screen.name === "exercise" && <Placeholder title="Exercise" />}
+      {screen.name === "exercise" && <ExerciseProgress exerciseId={screen.id} onBack={() => setScreen({ name: "gym" })} />}
       {screen.name === "body" && (
         <main className="screen">
           <header className="screen-header"><h1>Body</h1></header>
