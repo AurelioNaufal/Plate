@@ -5,7 +5,7 @@ import { monthKey, todayTaipei, weekday } from "../../shared/dates";
 import { budgetStatus } from "../../shared/budgets";
 import { routinesForDay } from "../../shared/gym";
 import { formatNT } from "../../shared/money";
-import { dayNutrition, roundProtein, targetsFrom } from "../../shared/meals";
+import { dayNutrition, proteinPerTen, proteinValueText, roundProtein, targetsFrom } from "../../shared/meals";
 import { upcomingCharges } from "../../shared/recurring";
 import type { Row } from "../../shared/schema";
 import { formatLongDay, formatShortDay } from "../format";
@@ -138,6 +138,9 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
                       {m.Time ? `${m.Time} · ` : ""}
                       {nutritionText(m)}
                     </span>
+                    {tx && proteinPerTen(m.Protein, Number(tx.Amount)) !== null && (
+                      <span className="small" style={{ color: "var(--accent)", fontWeight: 600 }}>{proteinValueText(m.Protein, Number(tx.Amount))}</span>
+                    )}
                   </span>
                   <span className={tx ? "" : "small muted"} style={tx ? { fontSize: 14, fontWeight: 700 } : undefined}>{price}</span>
                 </button>

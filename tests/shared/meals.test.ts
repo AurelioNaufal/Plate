@@ -1,4 +1,4 @@
-import { planMealSave, planMealDelete, dayNutrition, parseNutritionInput, itemsLabel, foodCategory, getSetting, targetsFrom, type MealInput } from "../../src/shared/meals";
+import { planMealSave, planMealDelete, dayNutrition, parseNutritionInput, itemsLabel, foodCategory, getSetting, targetsFrom, type MealInput, proteinPerTen } from "../../src/shared/meals";
 
 test("targetsFrom defaults protein to 120 and leaves calories blank", () => {
   expect(targetsFrom([])).toEqual({ protein: 120, kcal: null });
@@ -175,4 +175,13 @@ test("applyChanges upserts by ID and removes by ID without touching the input", 
   expect(next.Meals.map((m) => m.Name)).toEqual(["New", "Added"]);
   expect(next.Transactions).toEqual([]);
   expect(rows.Meals[0].Name).toBe("Old");
+});
+
+test("proteinPerTen is grams of protein per NT$10, to 1 decimal; blank without both numbers", () => {
+  expect(proteinPerTen(14, 49)).toBe(2.9);
+  expect(proteinPerTen(6, 35)).toBe(1.7);
+  expect(proteinPerTen(14, null)).toBeNull();
+  expect(proteinPerTen(null, 49)).toBeNull();
+  expect(proteinPerTen(14, 0)).toBeNull();
+  expect(proteinPerTen(0, 40)).toBe(0);
 });

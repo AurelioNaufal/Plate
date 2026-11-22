@@ -19,6 +19,18 @@ export function parseNutritionInput(s: string): NutritionInput {
 export const roundKcal = (n: number) => Math.round(n);
 export const roundProtein = (n: number) => Math.round(n * 10) / 10;
 
+/** Grams of protein per NT$10 (protein / price x 10), 1 decimal; null unless both are numbers and price > 0. */
+export function proteinPerTen(protein: unknown, price: unknown): number | null {
+  if (typeof protein !== "number" || typeof price !== "number" || !Number.isFinite(protein) || !(price > 0)) return null;
+  return Math.round((protein / price) * 100) / 10;
+}
+
+/** "2.9 g per NT$10", or "" when there's no value. */
+export function proteinValueText(protein: unknown, price: unknown): string {
+  const v = proteinPerTen(protein, price);
+  return v === null ? "" : `${v.toFixed(1)} g per NT$10`;
+}
+
 /** The expense category paid meals go to: "Food" (any case), else the first visible expense category. */
 export function foodCategory(categories: Row[]): string | null {
   const expense = categories.filter((c) => c.Type === "expense");

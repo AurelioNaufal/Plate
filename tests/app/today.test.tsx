@@ -126,3 +126,10 @@ describe("Today's workout", () => {
     expect(onOpenGym).toHaveBeenCalled();
   });
 });
+
+test("a paid meal shows its protein per NT$10", () => {
+  renderToday();
+  const list = within(screen.getByRole("region", { name: "Meals today" }));
+  expect(list.getByRole("button", { name: /Bread \+ milk/ })).toHaveTextContent("6.0 g per NT$10");
+  expect(list.getByRole("button", { name: /Snack from home/ })).not.toHaveTextContent("per NT$10");
+});

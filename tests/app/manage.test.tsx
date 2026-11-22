@@ -44,6 +44,22 @@ beforeEach(() => {
 });
 
 describe("Saved foods", () => {
+  test("each priced food shows its protein per NT$10", () => {
+    render(<SavedFoods onBack={() => {}} />);
+    const rows = within(screen.getByRole("list", { name: "Saved foods" })).getAllByRole("button");
+    expect(rows[0]).toHaveTextContent("2.9 g per NT$10");
+    expect(rows[1]).toHaveTextContent("1.7 g per NT$10");
+  });
+
+  test("best protein value sorts highest first, foods without a value last", async () => {
+    (data.current.rows as Record<string, Row[]>).SavedFoods.push({ ID: "f3", Name: "Home eggs", Price: null, Kcal: 140, Protein: 12, SortOrder: 0 });
+    render(<SavedFoods onBack={() => {}} />);
+    const names = () => within(screen.getByRole("list", { name: "Saved foods" })).getAllByRole("button").map((b) => b.querySelector("span span")?.textContent);
+    expect(names()).toEqual(["Home eggs", "Combo Roti + Milk Fami", "7-11 Tuna Onigiri"]);
+    await userEvent.click(within(screen.getByRole("tablist", { name: "Sort" })).getByRole("tab", { name: "Best protein value" }));
+    expect(names()).toEqual(["Combo Roti + Milk Fami", "7-11 Tuna Onigiri", "Home eggs"]);
+  });
+
   test("lists foods in SortOrder with their numbers", () => {
     render(<SavedFoods onBack={() => {}} />);
     const rows = within(screen.getByRole("list", { name: "Saved foods" })).getAllByRole("button");

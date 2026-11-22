@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useData } from "../store";
 import { parseAmountInput } from "../../shared/money";
-import { parseNutritionInput, roundKcal, roundProtein } from "../../shared/meals";
+import { parseNutritionInput, proteinPerTen, proteinValueText, roundKcal, roundProtein } from "../../shared/meals";
 import type { Change } from "../../shared/changes";
 import type { Row } from "../../shared/schema";
 import { BackHeader } from "./BackHeader";
@@ -30,9 +30,19 @@ function summary(r: Row, withPrice: boolean): string {
   return parts.join(" · ") || "no numbers yet";
 }
 
+/** Highest protein per NT$10 first; foods without a value keep their order at the end. */
+function byValue(a: Row, b: Row): number {
+  const va = proteinPerTen(a.Protein, a.Price);
+  const vb = proteinPerTen(b.Protein, b.Price);
+  if (va === null || vb === null) return va === null ? (vb === null ? 0 : 1) : -1;
+  return vb - va;
+}
+
 export function FoodList({ tab, title, addLabel, withPrice, reorderable, onBack }: Props) {
   const { rows, save, remove, apply } = useData();
   const items = useMemo(() => [...(rows[tab] ?? [])].sort(bySortOrder), [rows, tab]);
+  const [sort, setSort] = useState<"order" | "value">("order");
+  const shown = withPrice && sort === "value" ? [...items].sort(byValue) : items;
   // null: just the list; "new": adding; otherwise the ID being edited.
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -67,20 +77,30 @@ export function FoodList({ tab, title, addLabel, withPrice, reorderable, onBack 
         <button className="btn btn-secondary" onClick={() => setEditing("new")}>{addLabel}</button>
       )}
 
+      {withPrice && items.length > 1 && (
+        <div className="segmented" role="tablist" aria-label="Sort">
+          <button role="tab" aria-selected={sort === "order"} onClick={() => setSort("order")}>Your order</button>
+          <button role="tab" aria-selected={sort === "value"} onClick={() => setSort("value")}>Best protein value</button>
+        </div>
+      )}
+
       <section className="card">
         {items.length === 0 ? (
           <p className="muted small" style={{ margin: 0 }}>Nothing here yet.</p>
         ) : (
           <ul className="list" aria-label={title} style={{ listStyle: "none", margin: 0, padding: 0 }}>
-            {items.map((r, i) => (
+            {shown.map((r, i) => (
               <li key={String(r.ID)} className="row-between" style={{ gap: 4 }}>
                 <button className="list-row" onClick={() => setEditing(String(r.ID))}>
                   <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontSize: 14, fontWeight: 600 }}>{show(r.Name)}</span>
                     <span className="small muted">{summary(r, withPrice)}</span>
+                    {withPrice && proteinPerTen(r.Protein, r.Price) !== null && (
+                      <span className="small" style={{ color: "var(--accent)", fontWeight: 600 }}>{proteinValueText(r.Protein, r.Price)}</span>
+                    )}
                   </span>
                 </button>
-                {reorderable && (
+                {reorderable && sort === "order" && (
                   <span style={{ display: "flex" }}>
                     <button className="icon-btn" aria-label={`Move ${show(r.Name)} up`} disabled={i === 0} onClick={() => move(i, -1)}>▲</button>
                     <button className="icon-btn" aria-label={`Move ${show(r.Name)} down`} disabled={i === items.length - 1} onClick={() => move(i, 1)}>▼</button>
