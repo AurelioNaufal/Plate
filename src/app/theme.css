@@ -12,6 +12,9 @@
   --kcal: #C2550A;
   --danger: #B42318;
   --track: #E3E6EB;
+  /* Chart series (validated with the dataviz palette checks, light on #FFFFFF, dark on #181B20). */
+  --series-1: #1D5FD6;
+  --series-2: #C2550A;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -27,6 +30,10 @@
     --kcal: #F08A4B;
     --danger: #F97066;
     --track: #2A2F37;
+  --series-1: #5B8EF0;
+  --series-2: #DC7030;
+    --series-1: #5B8EF0;
+    --series-2: #DC7030;
     color-scheme: dark;
   }
 }
@@ -42,6 +49,8 @@
   --kcal: #F08A4B;
   --danger: #F97066;
   --track: #2A2F37;
+  --series-1: #5B8EF0;
+  --series-2: #DC7030;
   color-scheme: dark;
 }
 
@@ -122,6 +131,20 @@ h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .ring-stat .stat-value { font-size: 17px; }
 .plain-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 @media (max-width: 400px) { .ring-stat { flex-direction: column; align-items: flex-start; } }
+
+.chart { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart-axis { stroke: var(--border); stroke-width: 1; }
+.chart-tick { fill: var(--muted); font-size: 10px; }
+.chart-line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: var(--series-1); stroke: var(--card); stroke-width: 2; }
+.chart-dot-soft { fill: var(--accent-soft); stroke: var(--series-1); stroke-width: 1.5; }
+.chart-bar { fill: var(--series-1); }
+.chart-bar.is-active, .is-active .chart-bar { opacity: 0.75; }
+.chart-hit { fill: transparent; cursor: pointer; }
+.chart-readout { color: var(--muted); min-height: 16px; }
+.chart-legend { display: flex; gap: 14px; color: var(--ink); }
+.chart-legend > span { display: inline-flex; align-items: center; gap: 6px; }
 
 .banner { background: var(--card); border: 1px solid var(--danger); border-radius: 12px; padding: 10px 12px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .center { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; }
