@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useData } from "../store";
-import { cashFlowRange, categoryByMonth, inPeriod, type Period } from "../../shared/aggregate";
+import { cashFlowRange, categoryByMonth, categoryOf, inPeriod, type Period } from "../../shared/aggregate";
 import { formatNT } from "../../shared/money";
 import { changeId } from "../../shared/changes";
 import { BackHeader } from "../components/BackHeader";
@@ -22,7 +22,7 @@ export function CategoryDetail({ category, period, onBack, onOpen }: Props) {
   const { rows, pending } = useData();
   const txs = rows.Transactions;
   const entries = useMemo(
-    () => txs.filter((t) => t.Type === "expense" && String(t.Category ?? "") === category && inPeriod(t, period)),
+    () => txs.filter((t) => t.Type === "expense" && categoryOf(t) === category && inPeriod(t, period)),
     [txs, category, period],
   );
   const total = entries.reduce((s, t) => s + (Number(t.Amount) || 0), 0);

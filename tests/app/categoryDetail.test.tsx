@@ -16,6 +16,8 @@ vi.mock("../../src/app/store", () => ({
         tx("u1", "expense", "2026-09-21", 500, "Utilities", "Phone"),
         tx("f3", "expense", "2026-11-02", 100, "Food", "Sandwich"),
         tx("i1", "income", "2026-11-05", 900, "Food", "Odd refund"),
+        { ...tx("n1", "expense", "2026-11-06", 70, "", "Old row"), Category: null },
+        tx("n2", "expense", "2026-11-07", 30, "", "Blank row"),
       ],
       Meals: [],
     },
@@ -46,4 +48,10 @@ test("tapping an entry opens it", async () => {
   render(<CategoryDetail category="Food" period={all} onBack={() => {}} onOpen={onOpen} />);
   await userEvent.click(screen.getByRole("button", { name: /Sandwich/ }));
   expect(onOpen).toHaveBeenCalledWith("f3");
+});
+
+test("Uncategorised lists the rows with no category, as Money counted them", () => {
+  render(<CategoryDetail category="Uncategorised" period={all} onBack={() => {}} onOpen={() => {}} />);
+  expect(within(screen.getByRole("region", { name: "Category total" })).getByText("NT$100")).toBeInTheDocument();
+  expect(within(screen.getByRole("list", { name: "Transactions" })).getAllByRole("button")).toHaveLength(2);
 });

@@ -97,3 +97,7 @@ Do these once, in the Apps Script editor, after Claude has pushed the new code. 
    *You should see:* your BMI, the weight chart, and on Targets an "Estimated maintenance" line with a **Use estimate** button. If your weight trend suggests new targets, a card offers them; nothing changes until you tap **Update**.
 
 **Logging a workout:** Gym → **Start workout** (or Start blank workout). Each exercise shows last time's sets, already filled in. Tick ✓ each set as you finish it: ticked sets are saved to the Sheet straight away. If you close the app mid-workout, Gym → **Continue workout** picks up where you left off. Tap **Finish workout** at the end.
+
+## Plan 3 update, stage 2 — Money analytics, export
+
+Nothing to do in Apps Script: this stage only changes the app. **Exporting:** Settings → **Export**, tick what you want (transactions, meals, recurring, saved foods, workouts, body), pick This month / a month / All time, and tap **Export** — one CSV per type opens in your phone's share sheet (or downloads on a laptop). Money's own **Export** link saves exactly the entries on screen. For a full backup, download the Plate Sheet itself: File → Download → Microsoft Excel (.xlsx).

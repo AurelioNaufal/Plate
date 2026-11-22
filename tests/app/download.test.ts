@@ -3,6 +3,9 @@ import { shareOrDownload } from "../../src/app/download";
 
 const files = [{ name: "plate-body-all.csv", text: "﻿ID\r\n" }];
 
+const pointer = (coarse: boolean) =>
+  (window.matchMedia = ((q: string) => ({ matches: coarse && q === "(pointer: coarse)" })) as unknown as typeof window.matchMedia);
+
 afterEach(() => {
   vi.restoreAllMocks();
   delete (navigator as { canShare?: unknown }).canShare;
@@ -10,6 +13,7 @@ afterEach(() => {
 });
 
 test("shares the files in one sheet when the phone can", async () => {
+  pointer(true);
   const shareFn = vi.fn(async () => {});
   Object.assign(navigator, { canShare: () => true, share: shareFn });
   await shareOrDownload(files);
@@ -18,6 +22,7 @@ test("shares the files in one sheet when the phone can", async () => {
 });
 
 test("a cancelled share does nothing else", async () => {
+  pointer(true);
   Object.assign(navigator, { canShare: () => true, share: async () => { throw new DOMException("cancelled", "AbortError"); } });
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   await shareOrDownload(files);
@@ -31,4 +36,16 @@ test("without sharing it downloads each file", async () => {
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
   await shareOrDownload([...files, { name: "plate-meals-all.csv", text: "x" }]);
   expect(names).toEqual(["plate-body-all.csv", "plate-meals-all.csv"]);
+});
+
+test("a laptop downloads even when its browser could share", async () => {
+  pointer(false);
+  const shareFn = vi.fn(async () => {});
+  Object.assign(navigator, { canShare: () => true, share: shareFn });
+  URL.createObjectURL = vi.fn(() => "blob:x");
+  URL.revokeObjectURL = vi.fn();
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  await shareOrDownload(files);
+  expect(shareFn).not.toHaveBeenCalled();
+  expect(click).toHaveBeenCalledTimes(1);
 });

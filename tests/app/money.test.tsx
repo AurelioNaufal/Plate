@@ -43,7 +43,9 @@ test("headline cards show counts, savings rate and the top category", () => {
   expect(within(head).getByText("17 entries")).toBeInTheDocument();
   expect(within(head).getByText("1 entry")).toBeInTheDocument();
   expect(within(head).getByText("Saved 76%")).toBeInTheDocument();
-  expect(within(head).getByText("Food NT$955")).toBeInTheDocument();
+  // Name and amount on their own lines, so a long name can't push the amount out of sight.
+  expect(within(head).getByText("Food")).toBeInTheDocument();
+  expect(within(head).getByText("NT$955")).toBeInTheDocument();
 });
 
 test("the Income switch lists only income, with its total and each row's share", async () => {

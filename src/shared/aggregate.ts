@@ -43,7 +43,8 @@ export type Summary = {
   savingsRate: number | null;
 };
 
-const categoryOf = (t: Row) => String(t.Category ?? "Uncategorised") || "Uncategorised";
+/** A row's expense/income category; blank or missing is "Uncategorised". */
+export const categoryOf = (t: Row) => String(t.Category ?? "Uncategorised") || "Uncategorised";
 
 function totals(map: Map<string, { amount: number; count: number }>, sum: number): CategoryTotal[] {
   return [...map]

@@ -37,3 +37,12 @@ test("Money keeps its period while a category is open", async () => {
   await userEvent.click(screen.getByRole("button", { name: /Back/ }));
   expect(within(screen.getByRole("tablist", { name: "Period" })).getByRole("tab", { name: "Year" })).toHaveAttribute("aria-selected", "true");
 });
+
+test("tapping the Money tab starts again at this week", async () => {
+  render(<App />);
+  await userEvent.click(screen.getByRole("button", { name: "Money" }));
+  await userEvent.click(within(screen.getByRole("tablist", { name: "Period" })).getByRole("tab", { name: "Year" }));
+  await userEvent.click(screen.getByRole("button", { name: "Today" }));
+  await userEvent.click(screen.getByRole("button", { name: "Money" }));
+  expect(within(screen.getByRole("tablist", { name: "Period" })).getByRole("tab", { name: "Week" })).toHaveAttribute("aria-selected", "true");
+});

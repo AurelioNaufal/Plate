@@ -19,3 +19,7 @@ test("the page never scrolls sideways and taps don't double-tap zoom", () => {
 test("form fields are at least 16px so focusing one doesn't zoom the page", () => {
   expect(css).toMatch(/\.field input, \.field select \{[^}]*font-size: 16px/);
 });
+
+test("big numbers in half-width cards shrink on a narrow screen instead of spilling over", () => {
+  expect(css).toMatch(/\.stat-value \{[^}]*font-size: clamp\(/);
+});

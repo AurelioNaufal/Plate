@@ -110,8 +110,9 @@ export function Money({ today = todayTaipei(), period: given, onPeriodChange, on
           <div style={{ minWidth: 0 }}>
             <div className="stat-label">Top category</div>
             <div style={{ fontWeight: 700, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {s.top ? `${s.top.category} ${formatNT(s.top.amount)}` : "—"}
+              {s.top ? s.top.category : "—"}
             </div>
+            {s.top && <div style={{ fontWeight: 700 }}>{formatNT(s.top.amount)}</div>}
             <div className="small muted">{formatNT(s.perDay)} / day</div>
           </div>
         </div>

@@ -2,12 +2,14 @@ export type OutFile = { name: string; text: string };
 
 /**
  * On a phone, opens one share sheet with every file (a second sheet in a row is refused,
- * since a tap allows only one). Elsewhere, or if sharing fails, downloads each file.
+ * since a tap allows only one). On a laptop — even one whose browser can share — or if
+ * sharing fails, downloads each file, since a desktop share panel can't save to disk.
  * A share the owner cancels does nothing more.
  */
 export async function shareOrDownload(files: OutFile[]): Promise<void> {
   const out = files.map((f) => new File([f.text], f.name, { type: "text/csv" }));
-  if (typeof navigator.canShare === "function" && navigator.canShare({ files: out })) {
+  const touch = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+  if (touch && typeof navigator.canShare === "function" && navigator.canShare({ files: out })) {
     try {
       await navigator.share({ files: out });
       return;

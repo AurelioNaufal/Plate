@@ -186,7 +186,13 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
 
       {screen.name !== "new" && screen.name !== "workout" && (
-        <BottomNav current={tab} onTab={(t) => setScreen({ name: t })} onAdd={() => setScreen({ name: "new" })} />
+        <BottomNav
+          current={tab}
+          onTab={(t) => {
+            // The Money tab starts at this week; only coming back from a category or an entry keeps the period.
+            if (t === "money") setMoneyPeriod(periodFor("week", todayTaipei()));
+            setScreen({ name: t });
+          }} onAdd={() => setScreen({ name: "new" })} />
       )}
     </>
   );
