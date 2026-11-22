@@ -99,6 +99,13 @@ function monthsBetween(start: string, end: string): string[] {
   return out;
 }
 
+/** The months a by-month view covers: Year and All show their own; any other period, the 12 months up to its end. */
+export function cashFlowRange(p: Period): { start: string; end: string } {
+  if (p.kind === "year" || p.kind === "all") return { start: p.start, end: p.end };
+  const last = monthKey(p.end);
+  return { start: monthRange(addMonths(last, -11)).start, end: monthRange(last).end };
+}
+
 export type MonthFlow = { month: string; income: number; spent: number; net: number; savingsRate: number | null };
 
 /** Income and spending per month in [start, end], empty months included, oldest first. */

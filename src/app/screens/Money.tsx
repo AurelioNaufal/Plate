@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useData } from "../store";
-import { inPeriod, monthlyCashFlow, periodFor, summarize, type Period } from "../../shared/aggregate";
-import { addMonths, monthKey, monthRange, todayTaipei } from "../../shared/dates";
+import { cashFlowRange, inPeriod, monthlyCashFlow, periodFor, summarize, type Period } from "../../shared/aggregate";
+import { todayTaipei } from "../../shared/dates";
 import { formatNT } from "../../shared/money";
 import { changeId } from "../../shared/changes";
 import type { Row } from "../../shared/schema";
@@ -11,7 +11,15 @@ import { TransactionList } from "../components/TransactionList";
 import { PairBarChart } from "../components/charts";
 import { formatMonthShort, formatPct } from "../format";
 
-type Props = { today?: string; onOpen(id: string): void; onOpenCategory?(category: string): void };
+
+type Props = {
+  today?: string;
+  /** When given, the period lives with the caller, so it survives opening a category or an entry. */
+  period?: Period;
+  onPeriodChange?(p: Period): void;
+  onOpen(id: string): void;
+  onOpenCategory?(category: string): void;
+};
 type Shown = "all" | "expense" | "income";
 
 const SHOWN: { kind: Shown; label: string }[] = [
@@ -25,17 +33,12 @@ const signedNT = (n: number) => `${n < 0 ? "−" : ""}${formatNT(Math.abs(n))}`;
 /** Plain thousands for the cash-flow table, where "NT$" on every cell won't fit at 360 px. */
 const plain = (n: number) => `${n < 0 ? "−" : ""}${Math.round(Math.abs(n)).toLocaleString("en-US")}`;
 
-/** Year and All show their own months; any other period shows the 12 months up to its end. */
-export function cashFlowRange(p: Period): { start: string; end: string } {
-  if (p.kind === "year" || p.kind === "all") return { start: p.start, end: p.end };
-  const last = monthKey(p.end);
-  return { start: monthRange(addMonths(last, -11)).start, end: monthRange(last).end };
-}
-
-export function Money({ today = todayTaipei(), onOpen, onOpenCategory }: Props) {
+export function Money({ today = todayTaipei(), period: given, onPeriodChange, onOpen, onOpenCategory }: Props) {
   const { rows, pending } = useData();
   const txs = rows.Transactions;
-  const [picked, setPeriod] = useState<Period>(() => periodFor("week", today));
+  const [own, setOwn] = useState<Period>(() => periodFor("week", today));
+  const picked = given ?? own;
+  const setPeriod = onPeriodChange ?? setOwn;
   // "All" follows the data: rows that arrive after it was picked still count.
   const period = useMemo(() => (picked.kind === "all" ? periodFor("all", today, txs) : picked), [picked, today, txs]);
   const [shown, setShown] = useState<Shown>("all");

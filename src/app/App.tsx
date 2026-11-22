@@ -5,6 +5,7 @@ import { DataProvider, useData } from "./store";
 import { Settings } from "./screens/Settings";
 import { Today } from "./screens/Today";
 import { Money } from "./screens/Money";
+import { CategoryDetail } from "./screens/CategoryDetail";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
@@ -23,8 +24,9 @@ import { TargetSuggestion } from "./components/TargetSuggestion";
 import { draftFromSession, draftToResume, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
 import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
+import { periodFor, type Period } from "../shared/aggregate";
 
-type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
+type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
   | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" } | { name: "profile" };
 
@@ -53,6 +55,8 @@ type ShellProps = { config: ApiConfig | null; onSaveConfig(cfg: ApiConfig): void
 function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
   const { status, loadError, reload, pending, retry, rows } = useData();
   const [screen, setScreen] = useState<Screen>({ name: "today" });
+  // Lives here so Money keeps its period while a category or an entry is open.
+  const [moneyPeriod, setMoneyPeriod] = useState<Period>(() => periodFor("week", todayTaipei()));
 
   if (status === "needs-setup") return <Settings config={config} onSave={onSaveConfig} />;
   if (status === "loading") return <main className="center muted">Loading your data…</main>;
@@ -76,7 +80,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
     saveDraft(d);
     setScreen({ name: "workout", draft: d });
   }
-  const tab = ["today", "money", "gym", "body"].includes(screen.name) ? (screen.name as Tab) : null;
+  const tab = screen.name === "category" ? "money" : ["today", "money", "gym", "body"].includes(screen.name) ? (screen.name as Tab) : null;
 
   return (
     <>
@@ -100,7 +104,22 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onOpenGym={() => setScreen({ name: "gym" })}
         />
       )}
-      {screen.name === "money" && <Money onOpen={(id) => setScreen({ name: "new", editId: id })} />}
+      {screen.name === "money" && (
+        <Money
+          period={moneyPeriod}
+          onPeriodChange={setMoneyPeriod}
+          onOpen={(id) => setScreen({ name: "new", editId: id })}
+          onOpenCategory={(category) => setScreen({ name: "category", category })}
+        />
+      )}
+      {screen.name === "category" && (
+        <CategoryDetail
+          category={screen.category}
+          period={moneyPeriod.kind === "all" ? periodFor("all", todayTaipei(), rows.Transactions) : moneyPeriod}
+          onBack={() => setScreen({ name: "money" })}
+          onOpen={(id) => setScreen({ name: "new", editId: id, back: screen })}
+        />
+      )}
       {screen.name === "gym" && (
         <Gym
           onStart={startWorkout}
@@ -158,7 +177,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           key={screen.editId ?? screen.editMealId ?? "new"}
           editId={screen.editId}
           editMealId={screen.editMealId}
-          onDone={() => setScreen({ name: screen.editId ? "money" : "today" })}
+          onDone={() => setScreen(screen.back ?? { name: screen.editId ? "money" : "today" })}
         />
       )}
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
