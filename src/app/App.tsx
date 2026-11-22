@@ -15,13 +15,15 @@ import { Recurring } from "./screens/Recurring";
 import { Gym } from "./screens/Gym";
 import { Workout } from "./screens/Workout";
 import { ExerciseProgress } from "./screens/ExerciseProgress";
+import { Exercises } from "./screens/Exercises";
+import { Routines } from "./screens/Routines";
 import { draftFromSession, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
 import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 
 type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
-  | { name: "workout"; draft: Draft } | { name: "exercise"; id: string };
+  | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" };
 
 export function App() {
   const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
@@ -138,10 +140,14 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
             { label: "Saved foods", onOpen: () => setScreen({ name: "savedFoods" }) },
             { label: "Quick-add buttons", onOpen: () => setScreen({ name: "quickAdd" }) },
             { label: "Recurring charges", onOpen: () => setScreen({ name: "recurring", from: "settings" }) },
+            { label: "Exercises", onOpen: () => setScreen({ name: "exercises" }) },
+            { label: "Routines", onOpen: () => setScreen({ name: "routines" }) },
             { label: "Targets", onOpen: () => setScreen({ name: "targets" }) },
           ]}
         />
       )}
+      {screen.name === "exercises" && <Exercises onBack={() => setScreen({ name: "settings" })} />}
+      {screen.name === "routines" && <Routines onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "targets" && <Targets onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "savedFoods" && <SavedFoods onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "quickAdd" && <QuickAdd onBack={() => setScreen({ name: "settings" })} />}

@@ -156,3 +156,6 @@ h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .set-num { font-weight: 700; color: var(--muted); text-align: center; }
 .set-done { width: 26px; height: 26px; accent-color: var(--accent); justify-self: center; }
 .rest-bar { position: sticky; top: 8px; z-index: 2; box-shadow: 0 1px 0 var(--border); }
+.day-toggles { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.day-toggle { border: 1px solid var(--border); background: var(--card); color: var(--ink); border-radius: 10px; min-height: 40px; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; }
+.day-toggle[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
