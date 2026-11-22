@@ -276,4 +276,18 @@ describe("gym and body validation", () => {
   test("routines need a name", () => {
     expect(up("Routines", { ID: "r1", Name: "", Weekdays: "1", ExerciseIDs: "" })).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
   });
+
+  test("a budget is a whole limit above 0 for one expense category, once", () => {
+    const cats = [
+      { ID: "c1", Name: "Food", Type: "expense", Hidden: false, SortOrder: 1 },
+      { ID: "c2", Name: "Gift", Type: "income", Hidden: false, SortOrder: 2 },
+    ];
+    const initial = { Categories: cats, Budgets: [{ ID: "b1", Category: "Food", MonthlyLimit: 6000 }] };
+    expect(up("Budgets", { ID: "b1", Category: "Food", MonthlyLimit: 5000 }, initial).ok).toBe(true);
+    expect(up("Budgets", { ID: "b1", Category: "Food", MonthlyLimit: 0 }, initial)).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Budgets", { ID: "b1", Category: "Food", MonthlyLimit: 99.5 }, initial)).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Budgets", { ID: "b2", Category: "food", MonthlyLimit: 100 }, initial)).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
+    expect(up("Budgets", { ID: "b3", Category: "Gift", MonthlyLimit: 100 }, initial)).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+    expect(up("Budgets", { ID: "b4", Category: "Nope", MonthlyLimit: 100 }, initial)).toMatchObject({ ok: false, error: { code: "BAD_REQUEST" } });
+  });
 });

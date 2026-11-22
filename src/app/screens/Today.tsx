@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useData } from "../store";
 import { periodFor, summarize } from "../../shared/aggregate";
-import { todayTaipei, weekday } from "../../shared/dates";
+import { monthKey, todayTaipei, weekday } from "../../shared/dates";
+import { budgetStatus } from "../../shared/budgets";
 import { routinesForDay } from "../../shared/gym";
 import { formatNT } from "../../shared/money";
 import { dayNutrition, roundProtein, targetsFrom } from "../../shared/meals";
@@ -38,6 +39,7 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
   const upcoming = upcomingCharges(rows.Recurring ?? [], today);
   const txById = useMemo(() => new Map(txs.map((t) => [String(t.ID), t])), [txs]);
 
+  const food = budgetStatus(rows.Budgets ?? [], txs, monthKey(today), rows.Categories ?? []).find((b) => b.category === "Food");
   const setsToday = (rows.Workouts ?? []).filter((w) => w.Date === today).length;
   const todaysRoutines = routinesForDay(rows.Routines ?? [], weekday(today));
 
@@ -90,6 +92,11 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
           <div className="stat-label">This week (Sun–Sat)</div>
           <div className="stat-value">{formatNT(week.spent)}</div>
         </div>
+        {food && (
+          <div className="small" style={{ gridColumn: "1 / -1", fontWeight: 600, color: food.level === "over" ? "var(--danger)" : food.level === "warn" ? "var(--kcal)" : "var(--muted)" }}>
+            {food.left < 0 ? `${formatNT(-food.left)} over Food budget this month` : `${formatNT(food.left)} left of Food budget this month`}
+          </div>
+        )}
       </section>
 
       <section className="card" aria-label="Today's workout">

@@ -7,6 +7,7 @@ import { Today } from "./screens/Today";
 import { Money } from "./screens/Money";
 import { CategoryDetail } from "./screens/CategoryDetail";
 import { Export } from "./screens/Export";
+import { Budgets } from "./screens/Budgets";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
@@ -27,7 +28,7 @@ import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 import { periodFor, type Period } from "../shared/aggregate";
 
-type Screen = { name: Tab; asking?: string | null } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
+type Screen = { name: Tab; asking?: string | null } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "budgets"; from: "money" | "settings" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
   | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" } | { name: "profile" };
 
@@ -116,6 +117,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onPeriodChange={setMoneyPeriod}
           onOpen={(id) => setScreen({ name: "new", editId: id })}
           onOpenCategory={(category) => setScreen({ name: "category", category })}
+          onOpenBudgets={() => setScreen({ name: "budgets", from: "money" })}
         />
       )}
       {screen.name === "category" && (
@@ -166,6 +168,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
             { label: "Categories", onOpen: () => setScreen({ name: "categories" }) },
             { label: "Saved foods", onOpen: () => setScreen({ name: "savedFoods" }) },
             { label: "Quick-add buttons", onOpen: () => setScreen({ name: "quickAdd" }) },
+            { label: "Budgets", onOpen: () => setScreen({ name: "budgets", from: "settings" }) },
             { label: "Recurring charges", onOpen: () => setScreen({ name: "recurring", from: "settings" }) },
             { label: "Exercises", onOpen: () => setScreen({ name: "exercises" }) },
             { label: "Routines", onOpen: () => setScreen({ name: "routines" }) },
@@ -189,6 +192,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onDone={() => setScreen(screen.back ?? { name: screen.editId ? "money" : "today" })}
         />
       )}
+      {screen.name === "budgets" && <Budgets onBack={() => setScreen(screen.from === "money" ? { name: "money" } : { name: "settings" })} />}
       {screen.name === "export" && <Export onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useData } from "../store";
 import { cashFlowRange, inPeriod, monthlyCashFlow, periodFor, summarize, type Period } from "../../shared/aggregate";
-import { todayTaipei } from "../../shared/dates";
+import { monthKey, todayTaipei } from "../../shared/dates";
 import { formatNT } from "../../shared/money";
 import { changeId } from "../../shared/changes";
 import type { Row } from "../../shared/schema";
@@ -9,9 +9,11 @@ import { PeriodSwitcher } from "../components/PeriodSwitcher";
 import { CategoryBreakdown, entryCount } from "../components/CategoryBreakdown";
 import { TransactionList } from "../components/TransactionList";
 import { PairBarChart } from "../components/charts";
-import { formatMonthShort, formatPct } from "../format";
+import { formatMonth, formatMonthShort, formatPct } from "../format";
 import { exportFileName, toCsv, type ExportRange } from "../../shared/csv";
 import { shareOrDownload } from "../download";
+import { budgetStatus } from "../../shared/budgets";
+import { BudgetBars } from "../components/BudgetBars";
 
 
 type Props = {
@@ -21,6 +23,7 @@ type Props = {
   onPeriodChange?(p: Period): void;
   onOpen(id: string): void;
   onOpenCategory?(category: string): void;
+  onOpenBudgets?(): void;
 };
 type Shown = "all" | "expense" | "income";
 
@@ -39,7 +42,7 @@ const plain = (n: number) => `${n < 0 ? "−" : ""}${Math.round(Math.abs(n)).toL
 const exportRange = (p: Period): ExportRange =>
   p.kind === "month" ? { kind: "month", month: p.start.slice(0, 7) } : p.kind === "all" ? { kind: "all" } : { kind: "range", start: p.start, end: p.end };
 
-export function Money({ today = todayTaipei(), period: given, onPeriodChange, onOpen, onOpenCategory }: Props) {
+export function Money({ today = todayTaipei(), period: given, onPeriodChange, onOpen, onOpenCategory, onOpenBudgets }: Props) {
   const { rows, pending } = useData();
   const txs = rows.Transactions;
   const [own, setOwn] = useState<Period>(() => periodFor("week", today));
@@ -77,6 +80,12 @@ export function Money({ today = todayTaipei(), period: given, onPeriodChange, on
   const mealsById = useMemo(() => new Map((rows.Meals ?? []).map((m) => [String(m.ID), m])), [rows.Meals]);
   // Every row in a pending request shows "saving…", not just the first one.
   const pendingIds = new Set(pending.flatMap((p) => p.changes.map(changeId)));
+  // Budgets are monthly: show the month the period ends in.
+  const budgetMonth = monthKey(period.end);
+  const budgets = useMemo(
+    () => budgetStatus(rows.Budgets ?? [], txs, budgetMonth, rows.Categories ?? []),
+    [rows.Budgets, txs, budgetMonth, rows.Categories],
+  );
   const flowLabel = period.kind === "year" ? period.start.slice(0, 4) : period.kind === "all" ? "all time" : "last 12 months";
 
   return (
@@ -121,6 +130,17 @@ export function Money({ today = todayTaipei(), period: given, onPeriodChange, on
       <section className="card" aria-label="Expense categories">
         <h2>Spending by category</h2>
         <CategoryBreakdown byCategory={s.byCategory} onOpen={onOpenCategory} />
+      </section>
+
+      <section className="card" aria-label="Budgets">
+        <div className="row-between">
+          <h2>Budgets</h2>
+          <span className="small muted">{formatMonth(`${budgetMonth}-01`)}</span>
+        </div>
+        {budgets.length ? <BudgetBars status={budgets} /> : <p className="muted small" style={{ margin: 0 }}>No budgets yet.</p>}
+        {onOpenBudgets && (
+          <button className="btn-link" style={{ alignSelf: "flex-start" }} onClick={onOpenBudgets}>{budgets.length ? "Edit budgets" : "Set budgets"}</button>
+        )}
       </section>
 
       <section className="card" aria-label="Monthly cash flow">

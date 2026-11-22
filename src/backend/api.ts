@@ -116,7 +116,12 @@ function prepareUpserts(tab: TabName, rawRows: unknown, ctx: ApiContext, pending
     // moving ChargedThrough back would bring deleted charges back.
     if (tab === "Recurring") row.ChargedThrough = laterDate(prior?.ChargedThrough, row.ChargedThrough);
     const others = [...existing.filter((r) => !earlier.some((p) => p.row.ID === r.ID)), ...earlier.map((p) => p.row)];
-    validate(tab, row, others);
+    // Categories as they will be after this request, for checks that name one.
+    const categories = () => [
+      ...ctx.store.read("Categories").filter((c) => !pending.some((p) => p.tab === "Categories" && p.row.ID === c.ID)),
+      ...pending.filter((p) => p.tab === "Categories").map((p) => p.row),
+    ];
+    validate(tab, row, others, categories);
     out.push({ tab, row, isUpdate });
   }
   return out;
@@ -183,7 +188,16 @@ function laterDate(a: unknown, b: unknown): string | null {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-function validate(tab: TabName, row: Row, others: Row[]) {
+function validate(tab: TabName, row: Row, others: Row[], categories: () => Row[] = () => []) {
+  if (tab === "Budgets") {
+    const name = typeof row.Category === "string" ? row.Category.trim() : "";
+    const clash = others.some((b) => b.ID !== row.ID && String(b.Category ?? "").trim().toLowerCase() === name.toLowerCase());
+    if (clash) fail("CONFLICT", `${name} already has a budget`);
+    if (!categories().some((c) => c.Type === "expense" && String(c.Name ?? "").trim() === name)) {
+      fail("BAD_REQUEST", "A budget needs an expense category");
+    }
+    if (!isWholeAtLeast(row.MonthlyLimit, 1)) fail("BAD_REQUEST", "MonthlyLimit must be a whole number above 0");
+  }
   if (tab === "Recurring") {
     const problem = recurringProblem(row);
     if (problem) fail("BAD_REQUEST", problem);
