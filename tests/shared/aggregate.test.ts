@@ -1,4 +1,5 @@
-import { summarize, shiftPeriod, groupByDay, periodFor, type Period } from "../../src/shared/aggregate";
+import { summarize, shiftPeriod, groupByDay, periodFor, monthlyCashFlow, categoryByMonth, type Period } from "../../src/shared/aggregate";
+import type { Row } from "../../src/shared/schema";
 import { weekRange } from "../../src/shared/dates";
 import { realWeek } from "../fixtures/week";
 
@@ -54,4 +55,56 @@ test("groupByDay lists newest day first", () => {
   expect(groups[0].date).toBe("2026-11-12");
   expect(groups[0].items).toHaveLength(1);
   expect(groups.at(-1)?.date).toBe("2026-11-01");
+});
+
+describe("analytics (Plan 3)", () => {
+  const s = summarize(realWeek, week, today);
+  const tx = (ID: string, Type: string, Date: string, Amount: number, Category: string): Row => ({ ID, Type, Date, Amount, Category, Description: "x" });
+  const months: Row[] = [
+    tx("m1", "expense", "2026-09-03", 300, "Food"),
+    tx("m2", "expense", "2026-09-20", 100, "Utilities"),
+    tx("m3", "income", "2026-09-10", 1000, "Part-Time Jobs"),
+    tx("m4", "expense", "2026-11-02", 100, "Food"),
+    tx("m5", "income", "2026-11-05", 500, "Part-Time Jobs"),
+  ];
+
+  test("counts transactions, overall and per category", () => {
+    expect(s.spentCount).toBe(17);
+    expect(s.incomeCount).toBe(1);
+    expect(s.byCategory[0].count).toBe(14);
+  });
+  test("income is broken down by category too", () => {
+    expect(s.incomeByCategory).toEqual([{ category: "Part-Time Jobs", amount: 5000, count: 1, share: 1 }]);
+  });
+  test("top is the biggest category", () => {
+    expect(s.top).toEqual({ category: "Food", amount: 955 });
+    expect(summarize([], week, today).top).toBeNull();
+  });
+  test("savings rate is net over income; none without income", () => {
+    expect(s.savingsRate).toBeCloseTo(0.761, 3);
+    expect(summarize(realWeek.filter((r) => r.Type !== "income"), week, today).savingsRate).toBeNull();
+  });
+  test("a year runs Jan 1 to Dec 31 and steps a year at a time", () => {
+    const y = periodFor("year", "2026-11-22");
+    expect(y).toEqual({ kind: "year", start: "2026-01-01", end: "2026-12-31" });
+    expect(shiftPeriod(y, -1)).toEqual({ kind: "year", start: "2025-01-01", end: "2025-12-31" });
+  });
+  test("all time starts at the earliest row and ends today", () => {
+    const a = periodFor("all", "2026-11-22", months);
+    expect(a).toEqual({ kind: "all", start: "2026-09-03", end: "2026-11-22" });
+    expect(shiftPeriod(a, 1)).toEqual(a);
+    expect(periodFor("all", "2026-11-22", [])).toEqual({ kind: "all", start: "2026-11-22", end: "2026-11-22" });
+  });
+  test("monthlyCashFlow has every month, empty ones as zeros, oldest first", () => {
+    expect(monthlyCashFlow(months, "2026-09-01", "2026-11-30")).toEqual([
+      { month: "2026-09", income: 1000, spent: 400, net: 600, savingsRate: 0.6 },
+      { month: "2026-10", income: 0, spent: 0, net: 0, savingsRate: null },
+      { month: "2026-11", income: 500, spent: 100, net: 400, savingsRate: 0.8 },
+    ]);
+  });
+  test("categoryByMonth shares add up to 1", () => {
+    const c = categoryByMonth(months, "Food", "2026-09-01", "2026-11-30");
+    expect(c.map((m) => [m.month, m.amount, m.count])).toEqual([["2026-09", 300, 1], ["2026-10", 0, 0], ["2026-11", 100, 1]]);
+    expect(c.reduce((a, m) => a + m.share, 0)).toBeCloseTo(1, 6);
+  });
 });
