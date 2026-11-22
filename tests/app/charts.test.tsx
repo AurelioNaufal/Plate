@@ -55,3 +55,13 @@ test("PairBarChart shows a legend with both series names", () => {
   expect(screen.getByText("Spent")).toBeInTheDocument();
   expect(container.querySelectorAll("[data-bar]")).toHaveLength(4);
 });
+
+test("long month labels are thinned so they never overlap", () => {
+  const months = ["Dec 25", "Jan 26", "Feb 26", "Mar 26", "Apr 26", "May 26", "Jun 26", "Jul 26", "Aug 26", "Sep 26", "Oct 26", "Nov 26"];
+  const { container } = render(<BarChart bars={months.map((label, i) => ({ label, value: i }))} label="By month" format={String} />);
+  const ticks = [...container.querySelectorAll("text.chart-tick")].filter((t) => months.includes(t.textContent ?? ""));
+  expect(ticks.length).toBeLessThanOrEqual(6);
+  expect(ticks.length).toBeGreaterThanOrEqual(4);
+  const { container: short } = render(<BarChart bars={months.map((l, i) => ({ label: l.slice(0, 3), value: i }))} label="Short" format={String} />);
+  expect([...short.querySelectorAll("text.chart-tick")].filter((t) => /^[A-Z][a-z]{2}$/.test(t.textContent ?? ""))).toHaveLength(12);
+});

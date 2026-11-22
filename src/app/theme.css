@@ -85,6 +85,8 @@ h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .field input, .field select { border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 12px; font-size: 16px; font-weight: 500; color: var(--ink); min-height: 46px; width: 100%; }
 .field-error { color: var(--danger); font-size: 12px; font-weight: 600; }
+.check-row { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px; cursor: pointer; }
+.check-row input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
 
 .btn { border: 0; border-radius: 12px; min-height: 48px; padding: 0 16px; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .btn-primary { background: var(--accent); color: var(--on-accent); }

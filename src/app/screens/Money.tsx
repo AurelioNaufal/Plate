@@ -10,6 +10,8 @@ import { CategoryBreakdown, entryCount } from "../components/CategoryBreakdown";
 import { TransactionList } from "../components/TransactionList";
 import { PairBarChart } from "../components/charts";
 import { formatMonthShort, formatPct } from "../format";
+import { exportFileName, toCsv, type ExportRange } from "../../shared/csv";
+import { shareOrDownload } from "../download";
 
 
 type Props = {
@@ -32,6 +34,10 @@ const SHOWN: { kind: Shown; label: string }[] = [
 const signedNT = (n: number) => `${n < 0 ? "−" : ""}${formatNT(Math.abs(n))}`;
 /** Plain thousands for the cash-flow table, where "NT$" on every cell won't fit at 360 px. */
 const plain = (n: number) => `${n < 0 ? "−" : ""}${Math.round(Math.abs(n)).toLocaleString("en-US")}`;
+
+/** A Money period as an export range: a month by its key, all time as "all", anything else by its dates. */
+const exportRange = (p: Period): ExportRange =>
+  p.kind === "month" ? { kind: "month", month: p.start.slice(0, 7) } : p.kind === "all" ? { kind: "all" } : { kind: "range", start: p.start, end: p.end };
 
 export function Money({ today = todayTaipei(), period: given, onPeriodChange, onOpen, onOpenCategory }: Props) {
   const { rows, pending } = useData();
@@ -199,10 +205,23 @@ export function Money({ today = todayTaipei(), period: given, onPeriodChange, on
             </button>
           ))}
         </div>
-        <div className="small" style={{ fontWeight: 600 }}>
-          {shown === "income" ? `Total ${formatNT(totals.income)}`
-            : shown === "expense" ? `Total ${formatNT(totals.expense)}`
-            : `Spent ${formatNT(totals.expense)} · Income ${formatNT(totals.income)}`}
+        <div className="row-between">
+          <span className="small" style={{ fontWeight: 600 }}>
+            {shown === "income" ? `Total ${formatNT(totals.income)}`
+              : shown === "expense" ? `Total ${formatNT(totals.expense)}`
+              : `Spent ${formatNT(totals.expense)} · Income ${formatNT(totals.income)}`}
+          </span>
+          <button
+            className="btn-link"
+            disabled={listed.length === 0}
+            onClick={() => {
+              const range = exportRange(period);
+              const oldestFirst = [...listed].sort((a, b) => String(a.Date).localeCompare(String(b.Date)));
+              void shareOrDownload([{ name: exportFileName("Transactions", range), text: toCsv("Transactions", oldestFirst) }]);
+            }}
+          >
+            Export
+          </button>
         </div>
         <TransactionList transactions={listed} pendingIds={pendingIds} mealsById={mealsById} shareOf={shareOf} onOpen={onOpen} />
       </section>

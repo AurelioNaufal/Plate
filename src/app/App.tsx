@@ -6,6 +6,7 @@ import { Settings } from "./screens/Settings";
 import { Today } from "./screens/Today";
 import { Money } from "./screens/Money";
 import { CategoryDetail } from "./screens/CategoryDetail";
+import { Export } from "./screens/Export";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
@@ -26,7 +27,7 @@ import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 import { periodFor, type Period } from "../shared/aggregate";
 
-type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
+type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
   | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" } | { name: "profile" };
 
@@ -163,6 +164,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
             { label: "Routines", onOpen: () => setScreen({ name: "routines" }) },
             { label: "Targets", onOpen: () => setScreen({ name: "targets" }) },
             { label: "Profile", onOpen: () => setScreen({ name: "profile" }) },
+            { label: "Export", onOpen: () => setScreen({ name: "export" }) },
           ]}
         />
       )}
@@ -180,6 +182,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
           onDone={() => setScreen(screen.back ?? { name: screen.editId ? "money" : "today" })}
         />
       )}
+      {screen.name === "export" && <Export onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
 
       {screen.name !== "new" && screen.name !== "workout" && (

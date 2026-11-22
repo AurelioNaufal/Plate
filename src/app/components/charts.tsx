@@ -96,6 +96,12 @@ function scaleY(max: number) {
 
 type Bar = { label: string; value: number };
 
+/** Show every nth tick label: at most 12, and never closer than the longest label is wide (10px text ≈ 5.5px a letter). */
+function tickEvery(labels: string[], slot: number): number {
+  const widest = Math.max(...labels.map((l) => l.length)) * 5.5 + 4;
+  return Math.max(Math.ceil(labels.length / 12), Math.ceil(widest / slot));
+}
+
 export function BarChart({ bars, label, format }: { bars: Bar[]; label: string; format(v: number): string }) {
   const [active, setActive] = useState<number | null>(null);
   if (bars.length === 0) return <Empty />;
@@ -103,7 +109,7 @@ export function BarChart({ bars, label, format }: { bars: Bar[]; label: string; 
   const sy = scaleY(max);
   const slot = PLOT_W / bars.length;
   const bw = Math.max(2, Math.min(28, slot - 2)); // 2px gap between bars
-  const every = Math.ceil(bars.length / 12);
+  const every = tickEvery(bars.map((b) => b.label), slot);
   const shown = active === null ? null : bars[active];
   const base = PAD.top + PLOT_H;
 
@@ -138,7 +144,7 @@ export function PairBarChart({ groups, aName, bName, label, format }: { groups: 
   const sy = scaleY(max);
   const slot = PLOT_W / groups.length;
   const bw = Math.max(2, Math.min(14, (slot - 6) / 2));
-  const every = Math.ceil(groups.length / 12);
+  const every = tickEvery(groups.map((g) => g.label), slot);
   const base = PAD.top + PLOT_H;
   const shown = active === null ? null : groups[active];
 
