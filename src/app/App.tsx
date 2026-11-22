@@ -12,9 +12,11 @@ import { Targets } from "./screens/Targets";
 import { SavedFoods } from "./screens/SavedFoods";
 import { QuickAdd } from "./screens/QuickAdd";
 import { Recurring } from "./screens/Recurring";
+import { Gym } from "./screens/Gym";
 
 type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
-  | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" };
+  | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
+  | { name: "workout" } | { name: "exercise"; id: string };
 
 export function App() {
   const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
@@ -77,7 +79,16 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
         />
       )}
       {screen.name === "money" && <Money onOpen={(id) => setScreen({ name: "new", editId: id })} />}
-      {screen.name === "gym" && <Placeholder title="Gym" />}
+      {screen.name === "gym" && (
+        <Gym
+          onStart={() => setScreen({ name: "workout" })}
+          onResume={() => setScreen({ name: "workout" })}
+          onEditSession={() => setScreen({ name: "workout" })}
+          onOpenExercise={(id) => setScreen({ name: "exercise", id })}
+        />
+      )}
+      {screen.name === "workout" && <Placeholder title="Workout" />}
+      {screen.name === "exercise" && <Placeholder title="Exercise" />}
       {screen.name === "body" && (
         <main className="screen">
           <header className="screen-header"><h1>Body</h1></header>
