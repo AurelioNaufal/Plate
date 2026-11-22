@@ -107,3 +107,52 @@ test("an old workout can't be edited while today's is in progress", async () => 
   expect(recent.getByRole("button", { name: "Edit this workout" })).toBeDisabled();
   expect(recent.getByText("Finish today's workout first.")).toBeInTheDocument();
 });
+
+describe("starting another routine while one is open", () => {
+  const pullDraft = (done: boolean) => ({
+    sessionId: "sp", date: "2026-11-16", routineId: "pull",
+    exercises: [{ exerciseId: "lat", sets: [{ id: "x1", weight: "40", reps: "10", done }, { id: "x2", weight: "", reps: "", done: false }] }],
+  });
+
+  test("the open workout is named", () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(pullDraft(true)));
+    render(<Gym {...props()} />);
+    expect(within(screen.getByRole("region", { name: "Unfinished workout" })).getByText("Pull in progress")).toBeInTheDocument();
+  });
+
+  test("with saved sets it asks first; Start Push then replaces it", async () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(pullDraft(true)));
+    const p = props();
+    render(<Gym {...p} />);
+    await userEvent.click(within(screen.getByRole("region", { name: "Today's workout" })).getByRole("button", { name: "Start workout" }));
+    expect(p.onStart).not.toHaveBeenCalled();
+    const ask = within(screen.getByRole("region", { name: "Switch workout" }));
+    expect(ask.getByText("Your Pull workout has 1 saved set. Start Push instead?")).toBeInTheDocument();
+    await userEvent.click(ask.getByRole("button", { name: "Start Push" }));
+    expect(p.onStart).toHaveBeenCalledWith("push", true);
+  });
+
+  test("Keep Pull leaves it alone", async () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(pullDraft(true)));
+    const p = props();
+    render(<Gym {...p} />);
+    await userEvent.click(within(screen.getByRole("region", { name: "Today's workout" })).getByRole("button", { name: "Start workout" }));
+    await userEvent.click(screen.getByRole("button", { name: "Keep Pull" }));
+    expect(screen.queryByRole("region", { name: "Switch workout" })).toBeNull();
+    expect(p.onStart).not.toHaveBeenCalled();
+  });
+
+  test("with nothing saved it just starts the one tapped", async () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(pullDraft(false)));
+    const p = props();
+    render(<Gym {...p} />);
+    await userEvent.click(within(screen.getByRole("region", { name: "Today's workout" })).getByRole("button", { name: "Start workout" }));
+    expect(p.onStart).toHaveBeenCalledWith("push");
+  });
+
+  test("a question sent from Today shows straight away", () => {
+    localStorage.setItem("plate.workoutDraft", JSON.stringify(pullDraft(true)));
+    render(<Gym {...props({ asking: "push" })} />);
+    expect(screen.getByRole("region", { name: "Switch workout" })).toHaveTextContent("Start Push instead?");
+  });
+});

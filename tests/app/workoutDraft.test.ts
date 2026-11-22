@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { loadDraft, saveDraft, clearDraft, type Draft } from "../../src/app/workoutDraft";
+import { loadDraft, saveDraft, clearDraft, startChoice, type Draft } from "../../src/app/workoutDraft";
 
 const draft: Draft = {
   sessionId: "s1",
@@ -76,4 +76,21 @@ test("a draft from an earlier day isn't resumed by Start workout", () => {
   expect(draftToResume("2026-11-19")).toBeNull();
   // Its ticked sets are already in the Sheet; the stale draft is cleared.
   expect(loadDraft()).toBeNull();
+});
+
+describe("startChoice", () => {
+  const d = (routineId: string | null, done: boolean): Draft => ({
+    sessionId: "s", date: "2026-11-22", routineId,
+    exercises: [{ exerciseId: "lat", sets: [{ id: "x", weight: "40", reps: "10", done }] }],
+  });
+  test("nothing open starts fresh; the same routine resumes", () => {
+    expect(startChoice(null, "push")).toBe("new");
+    expect(startChoice(d("pull", true), "pull")).toBe("resume");
+    expect(startChoice(d(null, false), null)).toBe("resume");
+  });
+  test("another routine replaces an untouched workout, and asks when sets are saved", () => {
+    expect(startChoice(d("pull", false), "push")).toBe("replace");
+    expect(startChoice(d("pull", true), "push")).toBe("ask");
+    expect(startChoice(d("pull", true), null)).toBe("ask");
+  });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Body } from "../../src/app/screens/Body";
 import { Profile } from "../../src/app/screens/Profile";
@@ -127,5 +127,23 @@ describe("Profile", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByText("Use 100 to 250 cm")).toBeInTheDocument();
     expect(apply).not.toHaveBeenCalled();
+  });
+});
+
+describe("changing the date", () => {
+  test("keeps a weight you typed when that day has no weigh-in", async () => {
+    setRows([w("2026-11-20", 60.4)]);
+    render(<Body today="2026-11-22" onOpenProfile={() => {}} onOpenSettings={() => {}} onOpenTargets={() => {}} />);
+    await userEvent.type(screen.getByLabelText("Weight (kg)"), "60.1");
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-11-21" } });
+    expect(screen.getByLabelText("Weight (kg)")).toHaveValue("60.1");
+  });
+  test("shows that day's weigh-in when it has one, and clears it again for an empty day", () => {
+    setRows([w("2026-11-20", 60.4)]);
+    render(<Body today="2026-11-22" onOpenProfile={() => {}} onOpenSettings={() => {}} onOpenTargets={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-11-20" } });
+    expect(screen.getByLabelText("Weight (kg)")).toHaveValue("60.4");
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-11-21" } });
+    expect(screen.getByLabelText("Weight (kg)")).toHaveValue("");
   });
 });

@@ -48,9 +48,11 @@ export function Body({ today = todayTaipei(), onOpenProfile, onOpenSettings, onO
   const [saved, setSaved] = useState(false);
 
   function pickDate(d: string) {
-    setDate(d);
     const r = rowFor(d);
-    setForm(fill(r));
+    // Load that day's weigh-in; for an empty day keep what was typed, unless the
+    // form was showing another day's saved numbers (those mustn't move days).
+    if (r || rowFor(date)) setForm(fill(r));
+    setDate(d);
     if (hasExtras(r)) setMore(true);
     setError(undefined);
     setSaved(false);

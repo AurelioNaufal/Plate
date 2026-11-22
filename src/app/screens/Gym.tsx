@@ -4,11 +4,14 @@ import { todayTaipei, weekday } from "../../shared/dates";
 import { formatWeekdays, parseIdList, parseWeekdays, routinesForDay, sessionsFrom, setLabel, type Session } from "../../shared/gym";
 import type { Row } from "../../shared/schema";
 import { formatShortDay } from "../format";
-import { clearDraft, loadDraft } from "../workoutDraft";
+import { clearDraft, loadDraft, savedSetCount, startChoice } from "../workoutDraft";
 
 type Props = {
   today?: string;
-  onStart(routineId: string | null): void;
+  /** replace: the owner agreed to close today's open workout. */
+  onStart(routineId: string | null, replace?: boolean): void;
+  /** A routine Today tried to start while another workout is open: ask straight away. */
+  asking?: string | null;
   onResume(): void;
   onOpenExercise(id: string): void;
   onEditSession(sessionId: string): void;
@@ -16,7 +19,7 @@ type Props = {
 
 const bySortOrder = (a: Row, b: Row) => Number(a.SortOrder ?? 0) - Number(b.SortOrder ?? 0);
 
-export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, onEditSession }: Props) {
+export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, onEditSession, asking = null }: Props) {
   const { rows } = useData();
   const exercises = useMemo(() => [...(rows.Exercises ?? [])].sort(bySortOrder), [rows.Exercises]);
   const names = useMemo(() => new Map(exercises.map((e) => [String(e.ID), String(e.Name ?? "")])), [exercises]);
@@ -29,6 +32,16 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
   const [draft, setDraft] = useState(() => loadDraft());
   const [open, setOpen] = useState<string | null>(null);
   const draftToday = draft !== null && draft.date === today;
+  // undefined: no question; null: a blank workout was tapped.
+  const [switchTo, setSwitchTo] = useState<string | null | undefined>(asking ?? undefined);
+  const routineName = (id: string | null | undefined) =>
+    id ? String(routines.find((r) => r.ID === id)?.Name ?? "Workout") : "Blank workout";
+
+  /** Starting another routine never silently reopens the one already open. */
+  const start = (routineId: string | null) => {
+    if (draftToday && startChoice(draft, routineId) === "ask") setSwitchTo(routineId);
+    else onStart(routineId);
+  };
 
   const nameOf = (id: unknown) => names.get(String(id)) ?? "Deleted exercise";
   const count = (r: Row) => parseIdList(r.ExerciseIDs).length;
@@ -46,7 +59,7 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
         <section className="card" aria-label="Unfinished workout">
           {draftToday ? (
             <div className="row-between">
-              <h2>Workout in progress</h2>
+              <h2>{`${draft.routineId ? routineName(draft.routineId) : "Blank workout"} in progress`}</h2>
               <button className="btn btn-primary" onClick={onResume}>Continue workout</button>
             </div>
           ) : (
@@ -62,12 +75,25 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
         </section>
       )}
 
+      {switchTo !== undefined && draftToday && (
+        <section className="card" aria-label="Switch workout">
+          <span>
+            {`Your ${routineName(draft.routineId)} workout has ${savedSetCount(draft)} saved set${savedSetCount(draft) === 1 ? "" : "s"}. Start ${routineName(switchTo)} instead?`}
+          </span>
+          <span className="small muted">Its saved sets stay in your history.</span>
+          <div className="grid-2">
+            <button className="btn btn-secondary" onClick={() => setSwitchTo(undefined)}>{`Keep ${routineName(draft.routineId)}`}</button>
+            <button className="btn btn-primary" onClick={() => onStart(switchTo, true)}>{`Start ${routineName(switchTo)}`}</button>
+          </div>
+        </section>
+      )}
+
       <section className="card" aria-label="Today's workout">
         <h2>Today</h2>
         {todays.length === 0 ? (
           <div className="row-between">
             <span className="muted">No routine today</span>
-            <button className="btn btn-secondary" onClick={() => onStart(null)}>Start blank workout</button>
+            <button className="btn btn-secondary" onClick={() => start(null)}>Start blank workout</button>
           </div>
         ) : (
           todays.map((r) => (
@@ -76,7 +102,7 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
                 <div style={{ fontWeight: 600 }}>{String(r.Name)}</div>
                 <div className="small muted">{`${count(r)} exercises`}</div>
               </div>
-              <button className="btn btn-primary" onClick={() => onStart(String(r.ID))}>Start workout</button>
+              <button className="btn btn-primary" onClick={() => start(String(r.ID))}>Start workout</button>
             </div>
           ))
         )}
@@ -91,11 +117,11 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
                 <div style={{ fontWeight: 600 }}>{String(r.Name)}</div>
                 <div className="small muted">{`${formatWeekdays(parseWeekdays(r.Weekdays))} · ${count(r)} exercises`}</div>
               </div>
-              <button className="btn btn-secondary" aria-label={`Start ${String(r.Name)}`} onClick={() => onStart(String(r.ID))}>Start</button>
+              <button className="btn btn-secondary" aria-label={`Start ${String(r.Name)}`} onClick={() => start(String(r.ID))}>Start</button>
             </div>
           ))}
           {todays.length > 0 && (
-            <button className="btn-link" style={{ alignSelf: "flex-start" }} onClick={() => onStart(null)}>Start blank workout</button>
+            <button className="btn-link" style={{ alignSelf: "flex-start" }} onClick={() => start(null)}>Start blank workout</button>
           )}
         </section>
       )}

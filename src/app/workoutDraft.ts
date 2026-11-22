@@ -86,3 +86,17 @@ export function draftFromSession(session: Session): Draft {
   }
   return { sessionId: session.id, date: session.date, routineId: null, exercises };
 }
+
+/**
+ * What Start should do when today's draft may already be open:
+ * nothing open → "new"; the same routine → "resume";
+ * another routine with nothing ticked → "replace" (nothing is lost);
+ * another routine with ticked (saved) sets → "ask".
+ */
+export function startChoice(existing: Draft | null, routineId: string | null): "new" | "resume" | "replace" | "ask" {
+  if (!existing) return "new";
+  if (existing.routineId === routineId) return "resume";
+  return savedSetCount(existing) > 0 ? "ask" : "replace";
+}
+
+export const savedSetCount = (d: Draft) => d.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);

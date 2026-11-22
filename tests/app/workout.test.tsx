@@ -199,3 +199,31 @@ describe("resuming checks the Sheet", () => {
     expect(apply).toHaveBeenCalledWith([{ tab: "Workouts", removeId: "w2" }]);
   });
 });
+
+test("1000 kg or more is refused on the screen, before the Sheet refuses it", async () => {
+  render(<Workout draft={draft()} onDone={() => {}} />);
+  apply.mockClear();
+  const kg = bench().getByLabelText("Set 1 kg");
+  await userEvent.clear(kg);
+  await userEvent.type(kg, "1000");
+  await userEvent.click(bench().getByLabelText("Set 1 done"));
+  expect(bench().getByText("Use less than 1000 kg")).toBeInTheDocument();
+  expect(apply).not.toHaveBeenCalled();
+});
+
+test("removing a set renumbers a later ticked set even after its numbers were mistyped", async () => {
+  const d = draft();
+  d.exercises[0].sets.push({ id: "w9", weight: "50", reps: "5", done: true });
+  data.current = {
+    rows: { Exercises: exercises, Routines: routines, Settings: [], Workouts: [...before, { ID: "w9", SessionID: "s1", Date: "2026-11-16", ExerciseID: "bench", SetNumber: 3, WeightKg: 50, Reps: 5, Done: true }] },
+    apply,
+  };
+  render(<Workout draft={d} onDone={() => {}} />);
+  const kg = bench().getByLabelText("Set 3 kg");
+  await userEvent.clear(kg);
+  await userEvent.type(kg, "5o");
+  apply.mockClear();
+  await userEvent.click(bench().getByRole("button", { name: "Remove set 1" }));
+  // The stored row keeps its saved numbers but moves to set 2, so no two sets share a number.
+  expect(lastApplied()).toEqual([{ tab: "Workouts", row: expect.objectContaining({ ID: "w9", SetNumber: 2, WeightKg: 50, Reps: 5 }) }]);
+});

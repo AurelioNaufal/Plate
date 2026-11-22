@@ -26,6 +26,8 @@ function parseSet(s: DraftSet): Parsed {
   if (!w && !r) return { ok: false, error: "Enter reps or kg" };
   if (w && !/^\d+(\.\d+)?$/.test(w)) return { ok: false, error: "Use a number for kg" };
   if (r && !/^\d+$/.test(r)) return { ok: false, error: "Use whole reps" };
+  // The Sheet refuses 1000 kg or more; say so here instead of failing to save.
+  if (w && Number(w) >= 1000) return { ok: false, error: "Use less than 1000 kg" };
   return { ok: true, weightKg: w ? Number(w) : null, reps: r ? Number(r) : null };
 }
 
@@ -116,11 +118,17 @@ export function Workout({ draft: initial, onDone, onLeave }: Props) {
     const removed = sets[index];
     const changes: Change[] = [];
     if (removed.done) changes.push({ tab: "Workouts", removeId: removed.id });
-    // Ticked sets after it move up one place.
+    // Ticked sets after it move up one place. One whose numbers are mid-edit and
+    // unreadable keeps its saved numbers, but still moves, so no two sets share a number.
+    const stored = new Map(workouts.map((r) => [String(r.ID), r]));
     sets.forEach((s, i) => {
       if (i <= index || !s.done) return;
       const p = parseSet(s);
       if (p.ok) changes.push({ tab: "Workouts", row: rowFor(exerciseId, s, i, p) });
+      else {
+        const have = stored.get(s.id);
+        if (have) changes.push({ tab: "Workouts", row: { ...have, SetNumber: i } });
+      }
     });
     if (changes.length) void apply(changes);
     updateSets(exerciseId, (xs) => xs.filter((_, i) => i !== index));

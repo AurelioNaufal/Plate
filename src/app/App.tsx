@@ -22,12 +22,12 @@ import { Routines } from "./screens/Routines";
 import { Body } from "./screens/Body";
 import { Profile } from "./screens/Profile";
 import { TargetSuggestion } from "./components/TargetSuggestion";
-import { draftFromSession, draftToResume, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
+import { draftFromSession, draftToResume, loadDraft, newDraft, saveDraft, startChoice, type Draft } from "./workoutDraft";
 import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 import { periodFor, type Period } from "../shared/aggregate";
 
-type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
+type Screen = { name: Tab; asking?: string | null } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
   | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" } | { name: "profile" };
 
@@ -72,10 +72,15 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
 
   const failed = pending.filter((p) => p.error);
 
-  /** Starts a routine (or a blank workout) unless one is already in progress on this phone. */
-  function startWorkout(routineId: string | null) {
+  /**
+   * Starts a routine (or a blank workout). Today's open workout is resumed only for the same
+   * routine; an untouched one is replaced; one with saved sets needs replace (Gym asks first).
+   */
+  function startWorkout(routineId: string | null, replace = false) {
     const existing = draftToResume(todayTaipei());
-    if (existing) return setScreen({ name: "workout", draft: existing });
+    const choice = replace ? "replace" : startChoice(existing, routineId);
+    if (choice === "resume" && existing) return setScreen({ name: "workout", draft: existing });
+    if (choice === "ask") return setScreen({ name: "gym", asking: routineId });
     const routine = routineId ? (rows.Routines ?? []).find((r) => r.ID === routineId) ?? null : null;
     const d = newDraft(routine, rows.Exercises ?? [], rows.Workouts ?? [], todayTaipei(), () => crypto.randomUUID());
     saveDraft(d);
@@ -123,6 +128,8 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
       )}
       {screen.name === "gym" && (
         <Gym
+          key={screen.asking === undefined ? "gym" : `ask-${screen.asking}`}
+          asking={screen.asking}
           onStart={startWorkout}
           onResume={() => {
             const d = loadDraft();
