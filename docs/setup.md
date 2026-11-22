@@ -101,3 +101,12 @@ Do these once, in the Apps Script editor, after Claude has pushed the new code. 
 ## Plan 3 update, stage 2 — Money analytics, export
 
 Nothing to do in Apps Script: this stage only changes the app. **Exporting:** Settings → **Export**, tick what you want (transactions, meals, recurring, saved foods, workouts, body), pick This month / a month / All time, and tap **Export** — one CSV per type opens in your phone's share sheet (or downloads on a laptop). Money's own **Export** link saves exactly the entries on screen. For a full backup, download the Plate Sheet itself: File → Download → Microsoft Excel (.xlsx).
+
+## Plan 3 update, stage 3 — budgets, protein value, Sunday review, theme
+
+Do this once in the Apps Script editor after Claude has pushed the new code: **Deploy → Manage deployments → ✏ → Version: New version → Deploy** (it adds the checks for budgets). Nothing to run.
+
+- **Budgets:** Money → Budgets card → **Set budgets** (or Settings → Budgets). Type a monthly NT$ limit for any category; leave it blank for none. Bars turn orange from 80% and red when over; recurring charges count. Today shows what's left of your Food budget.
+- **Protein per NT$10:** saved foods and paid meals show it; Saved foods can be sorted by **Best protein value**.
+- **Sunday review:** every Sunday, Today opens with last week's summary. Older weeks: Body → **Weekly reviews**.
+- **Appearance:** Settings → **Appearance** → Auto / Light / Dark. Your choice is saved to the Sheet, so your other devices follow it.
