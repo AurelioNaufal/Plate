@@ -12,8 +12,13 @@ export function periodFor(kind: "week" | "month" | "year" | "all", today: string
   if (kind === "month") return { kind, ...monthRange(monthKey(today)) };
   if (kind === "year") return { kind, ...yearRange(Number(today.slice(0, 4))) };
   let start = today;
-  for (const t of txs) if (typeof t.Date === "string" && t.Date && t.Date < start) start = t.Date;
-  return { kind, start, end: today };
+  let end = today;
+  for (const t of txs) {
+    if (typeof t.Date !== "string" || !t.Date) continue;
+    if (t.Date < start) start = t.Date;
+    if (t.Date > end) end = t.Date;
+  }
+  return { kind, start, end };
 }
 
 export function shiftPeriod(p: Period, dir: -1 | 1): Period {

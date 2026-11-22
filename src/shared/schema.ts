@@ -18,7 +18,7 @@ export const TABS = {
   QuickAdd: { columns: [["ID", s], ["Name", s], ["Kcal", n], ["Protein", n], ["SortOrder", n]] },
   Recurring: { columns: [["ID", s], ["Name", s], ["Amount", n], ["Category", s], ["Frequency", s], ["Weekday", n], ["MonthDay", n], ["Active", b], ["StartDate", d], ["ActiveSince", d], ["ChargedThrough", d]] },
   Budgets: { columns: [["ID", s], ["Category", s], ["MonthlyLimit", n]] },
-  Exercises: { columns: [["ID", s], ["Name", s], ["MuscleGroup", s], ["SortOrder", n]] },
+  Exercises: { columns: [["ID", s], ["Name", s], ["MuscleGroup", s], ["SortOrder", n], ["Hidden", b]] },
   Routines: { columns: [["ID", s], ["Name", s], ["Weekdays", s], ["ExerciseIDs", s]] },
   Workouts: { columns: [["ID", s], ["SessionID", s], ["Date", d], ["ExerciseID", s], ["SetNumber", n], ["WeightKg", n], ["Reps", n], ["Done", b]] },
   Body: { columns: [["ID", s], ["Date", d], ["WeightKg", n], ["BodyFatPct", n], ["WaistCm", n], ["ArmCm", n]] },

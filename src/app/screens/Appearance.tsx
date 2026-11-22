@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useData } from "../store";
 import { BackHeader } from "../components/BackHeader";
 import { applyTheme, initialTheme, type ThemeChoice } from "../theme";
+import { getSetting } from "../../shared/meals";
 
 const CHOICES: { choice: ThemeChoice; label: string }[] = [
   { choice: "auto", label: "Auto" },
@@ -10,8 +11,12 @@ const CHOICES: { choice: ThemeChoice; label: string }[] = [
 ];
 
 export function Appearance({ onBack }: { onBack(): void }) {
-  const { save } = useData();
-  const [current, setCurrent] = useState<ThemeChoice>(() => initialTheme());
+  const { rows, save } = useData();
+  // The Sheet's choice first: this phone may be unable to remember one.
+  const [current, setCurrent] = useState<ThemeChoice>(() => {
+    const saved = getSetting(rows.Settings ?? [], "theme");
+    return saved === "auto" || saved === "light" || saved === "dark" ? saved : initialTheme();
+  });
 
   function pick(choice: ThemeChoice) {
     applyTheme(choice);

@@ -9,8 +9,11 @@ const bySortOrder = (a: Row, b: Row) => Number(a.SortOrder ?? 0) - Number(b.Sort
 /** A monthly NT$ limit per visible expense category; blank means no budget. */
 export function Budgets({ onBack }: { onBack(): void }) {
   const { rows, apply } = useData();
-  const categories = (rows.Categories ?? []).filter((c) => c.Type === "expense" && !c.Hidden).sort(bySortOrder);
   const budgets = rows.Budgets ?? [];
+  // Hidden categories show only while they still have a budget, so it can be cleared.
+  const categories = (rows.Categories ?? [])
+    .filter((c) => c.Type === "expense" && (!c.Hidden || budgets.some((b) => String(b.Category ?? "") === String(c.Name))))
+    .sort(bySortOrder);
   const budgetFor = (name: string) => budgets.find((b) => String(b.Category ?? "") === name);
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(categories.map((c) => {
@@ -53,7 +56,7 @@ export function Budgets({ onBack }: { onBack(): void }) {
           return (
             <div key={name}>
               <label className="field">
-                {`${name} monthly limit`}
+                {`${name}${c.Hidden ? " (hidden)" : ""} monthly limit`}
                 <input
                   inputMode="numeric"
                   placeholder="No budget"

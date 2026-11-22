@@ -149,6 +149,7 @@ export function Body({ today = todayTaipei(), onOpenProfile, onOpenSettings, onO
           <div>
             <div className="stat-label">Trend (7-day average)</div>
             <div className="stat-big">{latestTrend ? `${latestTrend.kg} kg` : "—"}</div>
+            {latest && <div className="small muted">{`Last weigh-in ${formatShortDay(latest.date)}`}</div>}
           </div>
           {since && <span className="small muted">{since}</span>}
         </div>

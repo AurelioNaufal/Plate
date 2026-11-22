@@ -44,7 +44,8 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
   };
 
   const nameOf = (id: unknown) => names.get(String(id)) ?? "Deleted exercise";
-  const count = (r: Row) => parseIdList(r.ExerciseIDs).length;
+  const visible = new Set(exercises.filter((e) => !e.Hidden).map((e) => String(e.ID)));
+  const count = (r: Row) => parseIdList(r.ExerciseIDs).filter((id) => visible.has(id)).length;
 
   return (
     <main className="screen">
@@ -78,9 +79,9 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
       {switchTo !== undefined && draftToday && (
         <section className="card" aria-label="Switch workout">
           <span>
-            {`Your ${draft.routineId ? `${routineName(draft.routineId)} workout` : "blank workout"} has ${savedSetCount(draft)} saved set${savedSetCount(draft) === 1 ? "" : "s"}. Start ${switchTo ? routineName(switchTo) : "a blank workout"} instead?`}
+            {`Your ${draft.routineId ? `${routineName(draft.routineId)} workout` : "blank workout"} has ${savedSetCount(draft) ? `${savedSetCount(draft)} saved set${savedSetCount(draft) === 1 ? "" : "s"}` : "numbers you haven't ticked"}. Start ${switchTo ? routineName(switchTo) : "a blank workout"} instead?`}
           </span>
-          <span className="small muted">Its saved sets stay in your history.</span>
+          <span className="small muted">{savedSetCount(draft) ? "Its saved sets stay in your history." : "Numbers you haven't ticked aren't saved."}</span>
           <div className="stack">
             <button className="btn btn-secondary" onClick={() => setSwitchTo(undefined)}>{`Keep ${routineName(draft.routineId)}`}</button>
             <button className="btn btn-primary" onClick={() => onStart(switchTo, true)}>{`Start ${routineName(switchTo)}`}</button>
@@ -150,7 +151,7 @@ export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, 
       <section className="card" aria-label="Exercises">
         <h2>Exercises</h2>
         <div className="list">
-          {exercises.map((e) => (
+          {exercises.filter((e) => !e.Hidden).map((e) => (
             <button key={String(e.ID)} className="list-row" onClick={() => onOpenExercise(String(e.ID))}>
               <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{String(e.Name)}</span>

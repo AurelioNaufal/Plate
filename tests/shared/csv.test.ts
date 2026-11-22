@@ -58,3 +58,10 @@ test("file names", () => {
   expect(exportFileName("SavedFoods", { kind: "all" })).toBe("plate-savedfoods-all.csv");
   expect(exportFileName("Body", { kind: "range", start: "2026-11-15", end: "2026-11-21" })).toBe("plate-body-2026-11-15_2026-11-21.csv");
 });
+
+test("text that would run as a spreadsheet formula is kept as text; numbers stay numbers", () => {
+  const rows = [tx("f", "2026-11-02", "=SUM(A1)", -5), tx("g", "2026-11-03", "-50% sale"), tx("h", "2026-11-04", "+ drink"), tx("i", "2026-11-05", "@home")];
+  const parsed = parseCsv(toCsv("Transactions", rows).slice(1));
+  expect(parsed.slice(1).map((r) => r[4])).toEqual(["'=SUM(A1)", "'-50% sale", "'+ drink", "'@home"]);
+  expect(parsed[1][3]).toBe("-5");
+});

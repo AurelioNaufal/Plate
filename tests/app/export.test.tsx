@@ -60,3 +60,21 @@ test("Money's Export sends the entries on screen, named after the period", async
   expect(files.map((f) => f.name)).toEqual(["plate-transactions-2026-11-08_2026-11-14.csv"]);
   expect(files[0].text.split("\r\n").filter(Boolean)).toHaveLength(1 + 18);
 });
+
+test("Export says what happened", async () => {
+  share.fn.mockResolvedValueOnce("downloaded" as never);
+  render(<Export today="2026-11-22" onBack={() => {}} />);
+  await userEvent.click(screen.getByLabelText("Transactions"));
+  await userEvent.click(screen.getByLabelText("Body"));
+  await userEvent.click(screen.getByRole("button", { name: "Export" }));
+  expect(await screen.findByText("Downloaded 2 files. If your browser asks, allow multiple downloads.")).toBeInTheDocument();
+});
+
+test("Money's export says it's done, and its file name says which entries", async () => {
+  share.fn.mockResolvedValueOnce("shared" as never);
+  render(<Money today="2026-11-12" onOpen={() => {}} />);
+  await userEvent.click(screen.getByRole("tab", { name: "Income" }));
+  await userEvent.click(screen.getByRole("button", { name: "Export" }));
+  expect((share.fn.mock.calls[0][0] as { name: string }[])[0].name).toBe("plate-transactions-2026-11-08_2026-11-14-income.csv");
+  expect(await screen.findByText("Shared")).toBeInTheDocument();
+});

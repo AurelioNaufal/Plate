@@ -55,3 +55,9 @@ test("Uncategorised lists the rows with no category, as Money counted them", () 
   expect(within(screen.getByRole("region", { name: "Category total" })).getByText("NT$100")).toBeInTheDocument();
   expect(within(screen.getByRole("list", { name: "Transactions" })).getAllByRole("button")).toHaveLength(2);
 });
+
+test("the table's share is of the months shown, and a custom range across years shows the years", () => {
+  render(<CategoryDetail category="Food" period={{ kind: "custom", start: "2025-12-20", end: "2026-01-10" }} onBack={() => {}} onOpen={() => {}} />);
+  expect(screen.getByText("Amounts in NT$ · share of the months shown")).toBeInTheDocument();
+  expect(screen.getByText("Dec 20, 2025 – Jan 10, 2026")).toBeInTheDocument();
+});

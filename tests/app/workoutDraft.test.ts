@@ -102,3 +102,8 @@ test("an edit of a finished session is never resumed by Start: its sets are alre
   expect(startChoice(d, null)).toBe("replace");
   expect(startChoice(d, "push")).toBe("replace");
 });
+
+test("numbers typed but not ticked are worth asking about too", () => {
+  const d: Draft = { sessionId: "s", date: "2026-11-22", routineId: "pull", exercises: [{ exerciseId: "lat", sets: [{ id: "x", weight: "42", reps: "10", done: false, edited: true }] }] };
+  expect(startChoice(d, "push")).toBe("ask");
+});

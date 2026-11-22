@@ -92,3 +92,12 @@ test("budgets follow the current month, not the week's spill into the next one",
   render(<Money today="2026-11-30" onOpen={() => {}} onOpenCategory={() => {}} />);
   expect(within(screen.getByRole("region", { name: "Budgets" })).getByText("November 2026")).toBeInTheDocument();
 });
+
+test("a real Other category next to the grouped rest doesn't clash", async () => {
+  const { CategoryBreakdown } = await import("../../src/app/components/CategoryBreakdown");
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  const cats = ["Other", "A", "B", "C", "D", "E", "F"].map((category, i) => ({ category, amount: 70 - i, count: 1, share: 1 / 7 }));
+  render(<CategoryBreakdown byCategory={cats} />);
+  expect(errors).not.toHaveBeenCalled();
+  errors.mockRestore();
+});

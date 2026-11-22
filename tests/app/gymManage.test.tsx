@@ -121,3 +121,36 @@ describe("Routines", () => {
     expect(remove).toHaveBeenCalledWith("Routines", "pull");
   });
 });
+
+describe("hidden exercises", () => {
+  test("a hidden exercise is left out of the list, and adding its name brings it back", async () => {
+    data.current = { rows: { Exercises: [...exercises, { ID: "old", Name: "Leg press", MuscleGroup: "Legs", SortOrder: 9, Hidden: true }], Routines: [push, pull], Settings: [] }, save, remove, apply };
+    render(<Exercises onBack={() => {}} />);
+    expect(within(screen.getByRole("list", { name: "Exercises" })).queryByText("Leg press")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Add exercise" }));
+    await userEvent.type(screen.getByLabelText("Name"), "leg press");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(save).toHaveBeenCalledWith("Exercises", { ID: "old", Name: "Leg press", MuscleGroup: "Legs", SortOrder: 9, Hidden: false });
+  });
+
+  test("deleting an exercise with logged sets hides it", async () => {
+    data.current = {
+      rows: { Exercises: exercises, Routines: [push, pull], Settings: [], Workouts: [{ ID: "w1", SessionID: "s", Date: "2026-11-16", ExerciseID: "curl", SetNumber: 1, WeightKg: 10, Reps: 12, Done: true }] },
+      save, remove, apply,
+    };
+    render(<Exercises onBack={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: /Bicep curl/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Yes, delete" }));
+    expect(apply).toHaveBeenCalledWith([
+      { tab: "Exercises", row: { ...exercises[4], Hidden: true } },
+      { tab: "Routines", row: { ...pull, ExerciseIDs: "lat" } },
+    ]);
+  });
+
+  test("routine exercise counts leave out hidden and missing exercises", () => {
+    data.current = { rows: { Exercises: exercises.map((e) => (e.ID === "pec" ? { ...e, Hidden: true } : e)), Routines: [{ ...push, ExerciseIDs: "bench,pec,tricep,ghost" }], Settings: [] }, save, remove, apply };
+    render(<Routines onBack={() => {}} />);
+    expect(screen.getByRole("button", { name: /Push/ })).toHaveTextContent("Mon, Thu · 2 exercises");
+  });
+});

@@ -162,7 +162,7 @@ export function Workout({ draft: initial, onDone, onLeave }: Props) {
   }
 
   const inSession = new Set(draft.exercises.map((e) => e.exerciseId));
-  const pickable = exercises.filter((e) => !inSession.has(String(e.ID)));
+  const pickable = exercises.filter((e) => !e.Hidden && !inSession.has(String(e.ID)));
   const restDefault = (() => {
     const n = Number(getSetting(rows.Settings ?? [], "restSeconds"));
     return Number.isInteger(n) && n >= 15 && n <= 600 ? n : 90;
@@ -214,14 +214,14 @@ export function Workout({ draft: initial, onDone, onLeave }: Props) {
                     inputMode="decimal"
                     value={s.weight}
                     placeholder="–"
-                    onChange={(e) => updateSets(ex.exerciseId, (sets) => sets.map((x, j) => (j === i ? { ...x, weight: e.target.value } : x)))}
+                    onChange={(e) => updateSets(ex.exerciseId, (sets) => sets.map((x, j) => (j === i ? { ...x, weight: e.target.value, edited: true } : x)))}
                     onBlur={() => commit(ex.exerciseId, i)}
                   />
                   <input
                     aria-label={`Set ${i + 1} reps`}
                     inputMode="numeric"
                     value={s.reps}
-                    onChange={(e) => updateSets(ex.exerciseId, (sets) => sets.map((x, j) => (j === i ? { ...x, reps: e.target.value } : x)))}
+                    onChange={(e) => updateSets(ex.exerciseId, (sets) => sets.map((x, j) => (j === i ? { ...x, reps: e.target.value, edited: true } : x)))}
                     onBlur={() => commit(ex.exerciseId, i)}
                   />
                   <input type="checkbox" className="set-done" aria-label={`Set ${i + 1} done`} checked={s.done} onChange={() => toggle(ex.exerciseId, i)} />

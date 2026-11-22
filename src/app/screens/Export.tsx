@@ -21,6 +21,7 @@ export function Export({ today = todayTaipei(), onBack }: { today?: string; onBa
   const [rangeKind, setRangeKind] = useState<RangeKind>("this");
   const [month, setMonth] = useState(monthKey(today));
   const [error, setError] = useState("");
+  const [done, setDone] = useState("");
 
   const toggle = (tab: ExportTab) =>
     setPicked((cur) => {
@@ -34,13 +35,17 @@ export function Export({ today = todayTaipei(), onBack }: { today?: string; onBa
     if (picked.size === 0) return setError("Pick at least one");
     if (rangeKind === "pick" && !/^\d{4}-\d{2}$/.test(month)) return setError("Pick a month");
     setError("");
+    setDone("");
     const range: ExportRange =
       rangeKind === "all" ? { kind: "all" } : { kind: "month", month: rangeKind === "pick" ? month : monthKey(today) };
     const files = TYPES.filter((t) => picked.has(t.tab)).map(({ tab }) => ({
       name: exportFileName(tab, range),
       text: toCsv(tab, exportRows(rows, tab, range)),
     }));
-    await shareOrDownload(files);
+    const result = await shareOrDownload(files);
+    const n = files.length === 1 ? "1 file" : `${files.length} files`;
+    if (result === "shared") setDone(`Shared ${n}.`);
+    else if (result === "downloaded") setDone(`Downloaded ${n}.${files.length > 1 ? " If your browser asks, allow multiple downloads." : ""}`);
   }
 
   return (
@@ -72,6 +77,7 @@ export function Export({ today = todayTaipei(), onBack }: { today?: string; onBa
       </section>
       {error && <div className="field-error" role="alert">{error}</div>}
       <button className="btn btn-primary" onClick={run}>Export</button>
+      {done && <span className="small" role="status" style={{ fontWeight: 600 }}>{done}</span>}
       <p className="small muted" style={{ margin: 0 }}>
         One CSV file per type, ready for Excel or Google Sheets. Full backup: open your Plate Sheet → File → Download → Microsoft Excel (.xlsx).
       </p>

@@ -80,3 +80,15 @@ test("planExerciseDelete removes it and drops it from routines; history stays", 
     { tab: "Routines", row: { ...push, ExerciseIDs: "incline,tricep" } },
   ]);
 });
+
+test("deleting an exercise with history hides it, so its name stays in past workouts", () => {
+  const changes = planExerciseDelete({ ID: "bench", Name: "Bench press" }, [push], workouts);
+  expect(changes[0]).toEqual({ tab: "Exercises", row: { ID: "bench", Name: "Bench press", Hidden: true } });
+  expect(changes[1]).toEqual({ tab: "Routines", row: { ...push, ExerciseIDs: "incline,tricep" } });
+  expect(planExerciseDelete({ ID: "squat", Name: "Squat" }, [], workouts)[0]).toEqual({ tab: "Exercises", removeId: "squat" });
+});
+
+test("one weighted set doesn't switch a reps exercise to kg: the unit most workouts used wins", () => {
+  const oneWeighted = [...workouts, set("z1", "s9", "2026-11-21", "abs", 1, 5, 12)];
+  expect(bestSeries(oneWeighted, "abs").map((p) => [p.date, p.unit])).toEqual([["2026-11-16", "reps"], ["2026-11-19", "reps"], ["2026-11-21", "reps"]]);
+});

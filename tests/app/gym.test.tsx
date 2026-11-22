@@ -196,3 +196,13 @@ describe("stage 3 review fixes", () => {
     expect(p.onStart).toHaveBeenCalledWith("push");
   });
 });
+
+test("the question names typed numbers when nothing is saved yet", async () => {
+  localStorage.setItem("plate.workoutDraft", JSON.stringify({
+    sessionId: "sp", date: "2026-11-16", routineId: "pull",
+    exercises: [{ exerciseId: "lat", sets: [{ id: "x1", weight: "42", reps: "10", done: false, edited: true }] }],
+  }));
+  render(<Gym {...props()} />);
+  await userEvent.click(within(screen.getByRole("region", { name: "Today's workout" })).getByRole("button", { name: "Start workout" }));
+  expect(screen.getByRole("region", { name: "Switch workout" })).toHaveTextContent("Your Pull workout has numbers you haven't ticked. Start Push instead?");
+});

@@ -19,6 +19,11 @@ export function initialTheme(): ThemeChoice {
 export function applyTheme(choice: ThemeChoice): void {
   if (choice === "auto") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = choice;
+  // The status bar follows too: a forced theme sets both theme-color tags; auto puts them back.
+  for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+    if (!meta.dataset.auto) meta.dataset.auto = meta.content;
+    meta.content = choice === "auto" ? meta.dataset.auto : choice === "dark" ? "#0E1013" : "#F4F5F7";
+  }
   try {
     localStorage.setItem(KEY, choice);
   } catch {

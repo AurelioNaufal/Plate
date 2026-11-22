@@ -7,7 +7,7 @@ import { weeklyReview } from "../../shared/review";
 import { WeeklyReview, weekLabel } from "../components/WeeklyReview";
 import { routinesForDay } from "../../shared/gym";
 import { formatNT } from "../../shared/money";
-import { dayNutrition, proteinPerTen, proteinValueText, roundProtein, targetsFrom } from "../../shared/meals";
+import { dayNutrition, foodCategory, proteinPerTen, proteinValueText, roundProtein, targetsFrom } from "../../shared/meals";
 import { upcomingCharges } from "../../shared/recurring";
 import type { Row } from "../../shared/schema";
 import { formatLongDay, formatShortDay } from "../format";
@@ -41,7 +41,8 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
   const upcoming = upcomingCharges(rows.Recurring ?? [], today);
   const txById = useMemo(() => new Map(txs.map((t) => [String(t.ID), t])), [txs]);
 
-  const food = budgetStatus(rows.Budgets ?? [], txs, monthKey(today), rows.Categories ?? []).find((b) => b.category === "Food");
+  const foodName = foodCategory(rows.Categories ?? []) ?? "Food";
+  const food = budgetStatus(rows.Budgets ?? [], txs, monthKey(today), rows.Categories ?? []).find((b) => b.category === foodName);
   // On Sundays, the week that just ended.
   const review = useMemo(() => (weekday(today) === 0 ? weeklyReview(rows, addDays(today, -7)) : null), [rows, today]);
   const setsToday = (rows.Workouts ?? []).filter((w) => w.Date === today).length;
@@ -108,7 +109,7 @@ export function Today({ today = todayTaipei(), onOpenMeal, onOpenTargets, onOpen
         </div>
         {food && (
           <div className="small" style={{ gridColumn: "1 / -1", fontWeight: 600, color: food.level === "over" ? "var(--danger)" : food.level === "warn" ? "var(--kcal)" : "var(--muted)" }}>
-            {food.left < 0 ? `${formatNT(-food.left)} over Food budget this month` : `${formatNT(food.left)} left of Food budget this month`}
+            {food.left < 0 ? `${formatNT(-food.left)} over ${food.category} budget this month` : `${formatNT(food.left)} left of ${food.category} budget this month`}
           </div>
         )}
       </section>

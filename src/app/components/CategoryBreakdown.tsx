@@ -16,14 +16,15 @@ export function CategoryBreakdown({ byCategory, onOpen }: Props) {
   if (byCategory.length === 0) return <p className="muted small" style={{ margin: 0 }}>No spending in this period.</p>;
   const top = byCategory.slice(0, OTHER);
   const rest = byCategory.slice(OTHER);
-  const segments = rest.length ? [...top, { category: "Other", share: rest.reduce((s, c) => s + c.share, 0) }] : top;
+  // The grouped rest gets its own key: a real category may be called "Other".
+  const segments = rest.length ? [...top.map((c) => ({ key: c.category, share: c.share })), { key: "__rest", share: rest.reduce((s, c) => s + c.share, 0) }] : top.map((c) => ({ key: c.category, share: c.share }));
   const color = (i: number) => COLORS[Math.min(i, OTHER)];
 
   return (
     <>
       <div className="bar" aria-hidden="true">
         {segments.map((c, i) => (
-          <span key={c.category} style={{ width: `${c.share * 100}%`, background: color(i) }} />
+          <span key={c.key} style={{ width: `${c.share * 100}%`, background: color(i) }} />
         ))}
       </div>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>

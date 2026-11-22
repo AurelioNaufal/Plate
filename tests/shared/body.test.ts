@@ -48,16 +48,17 @@ test("maintenanceKcal is Mifflin-St Jeor × 1.55, to the nearest 50", () => {
 
 describe("targetSuggestion", () => {
   test("offers a calorie target when none is set", () => {
-    expect(targetSuggestion(profile("male", [{ ID: "proteinTarget", Value: "120" }]), 60)).toEqual({ protein: 120, kcal: 2400 });
+    expect(targetSuggestion(profile("male", [{ ID: "proteinTarget", Value: "120" }]), 60)).toEqual({ protein: null, kcal: 2400 });
   });
   test("is quiet when the targets already match", () => {
     expect(targetSuggestion(profile("male", [{ ID: "proteinTarget", Value: "120" }, { ID: "kcalTarget", Value: "2400" }]), 60)).toBeNull();
   });
   test("is quiet for a pair the owner said not now to", () => {
-    expect(targetSuggestion(profile("male", [{ ID: "targetSuggestionDismissed", Value: "120|2400" }]), 60)).toBeNull();
+    expect(targetSuggestion(profile("male", [{ ID: "targetSuggestionDismissed", Value: "|2400" }]), 60)).toBeNull();
   });
   test("follows the weight trend: protein at 2 g/kg, to the nearest 5", () => {
-    expect(targetSuggestion(profile("male", [{ ID: "kcalTarget", Value: "2400" }]), 63)).toEqual({ protein: 125, kcal: 2450 });
+    // Only protein moved enough (125 vs the default 120); 2,450 vs 2,400 kcal doesn't.
+    expect(targetSuggestion(profile("male", [{ ID: "kcalTarget", Value: "2400" }]), 63)).toEqual({ protein: 125, kcal: null });
   });
   test("without a profile it can still suggest protein", () => {
     expect(targetSuggestion([], 63)).toEqual({ protein: 125, kcal: null });

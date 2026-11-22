@@ -12,18 +12,21 @@ export function useTrendKg(): number | null {
  * Offers new targets when the weight trend has moved. Nothing changes until
  * the owner taps Update; "Not now" hides this exact pair.
  */
-export function TargetSuggestion({ onUpdated }: { onUpdated?(s: { protein: number; kcal: number | null }): void }) {
+export function TargetSuggestion({ onUpdated }: { onUpdated?(s: { protein: number | null; kcal: number | null }): void }) {
   const { rows, save, apply } = useData();
   const trendKg = useTrendKg();
   const s = targetSuggestion(rows.Settings ?? [], trendKg);
   if (!s || trendKg === null) return null;
 
-  const parts = [`${s.protein} g protein`];
+  const parts: string[] = [];
+  if (s.protein !== null) parts.push(`${s.protein} g protein`);
   if (s.kcal !== null) parts.push(`${s.kcal.toLocaleString("en-US")} kcal`);
 
   function update() {
     if (!s) return;
-    const changes: Change[] = [{ tab: "Settings", row: { ID: "proteinTarget", Value: String(s.protein) } }];
+    // Only the targets that moved enough; the other stays as you set it.
+    const changes: Change[] = [];
+    if (s.protein !== null) changes.push({ tab: "Settings", row: { ID: "proteinTarget", Value: String(s.protein) } });
     if (s.kcal !== null) changes.push({ tab: "Settings", row: { ID: "kcalTarget", Value: String(s.kcal) } });
     void apply(changes);
     onUpdated?.(s);

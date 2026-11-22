@@ -85,3 +85,16 @@ test("a week with no weigh-ins has no weight change, not 0", () => {
   expect(weekTrendChange(trend, "2026-11-08")).toBeNull();
   expect(weekTrendChange(trend, "2026-11-15")).toBe(-0.4);
 });
+
+test("the first week of weigh-ins shows the trend, and a long gap says since when", () => {
+  const first = weeklyReview({ ...rows, Body: [{ ID: "x", Date: "2026-11-18", WeightKg: 60 }] }, "2026-11-15");
+  expect(first).toMatchObject({ weightChange: null, weightNow: 60 });
+  const gap = weeklyReview({ ...rows, Body: [{ ID: "o", Date: "2026-10-04", WeightKg: 61 }, { ID: "n", Date: "2026-11-20", WeightKg: 60 }] }, "2026-11-15");
+  expect(gap).toMatchObject({ weightChange: -1, weightSince: "2026-10-04" });
+  expect(r.weightSince).toBeNull();
+});
+
+test("best value lists a food once whatever its capitals", () => {
+  const meals = [...rows.Meals, meal("m4", "2026-11-19", "chicken rice", 30, 600, "m1t")];
+  expect(weeklyReview({ ...rows, Meals: meals }, "2026-11-15").bestValue.map((b) => b.name)).toEqual(["Chicken rice", "Roti + milk", "Onigiri"]);
+});

@@ -47,3 +47,13 @@ test("Reviews lists the last 12 weeks, each opening to its review", async () => 
   await userEvent.click(weeks[1]);
   expect(screen.getByRole("region", { name: "Week of Sun 8 Nov" })).toHaveTextContent("NT$200");
 });
+
+test("the review card words weight for a first week and after a long gap", () => {
+  data.current = { rows: { ...(data.current.rows as object), Body: [{ ID: "x", Date: "2026-11-18", WeightKg: 60 }] } };
+  const { unmount } = render(<Today today="2026-11-22" />);
+  expect(screen.getByRole("region", { name: "Last week" })).toHaveTextContent("Trend 60.0 kg · first weigh-ins");
+  unmount();
+  data.current = { rows: { ...(data.current.rows as object), Body: [{ ID: "o", Date: "2026-10-04", WeightKg: 61 }, { ID: "n", Date: "2026-11-20", WeightKg: 60 }] } };
+  render(<Today today="2026-11-22" />);
+  expect(screen.getByRole("region", { name: "Last week" })).toHaveTextContent("Trend −1.0 kg since Sun 4 Oct");
+});

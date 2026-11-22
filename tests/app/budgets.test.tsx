@@ -74,3 +74,16 @@ test("Money shows a bar per budget for the month of the period's end", () => {
   expect(card.getByText("NT$50 over")).toBeInTheDocument();
   expect(card.getAllByRole("meter")).toHaveLength(2);
 });
+
+test("a hidden category that still has a budget can be edited", () => {
+  setRows([{ ID: "b9", Category: "Old stuff", MonthlyLimit: 300 }]);
+  render(<Budgets onBack={() => {}} />);
+  expect(screen.getByLabelText("Old stuff (hidden) monthly limit")).toHaveValue("300");
+});
+
+test("Today's budget line follows the food category's name", () => {
+  setRows([{ ID: "b1", Category: "Meals", MonthlyLimit: 3000 }]);
+  data.current = { ...data.current, rows: { ...(data.current.rows as object), Categories: [{ ID: "c1", Name: "Meals", Type: "expense", Hidden: false, SortOrder: 1 }] } };
+  render(<Today today="2026-11-12" />);
+  expect(screen.getByText(/left of Meals budget this month/)).toBeInTheDocument();
+});

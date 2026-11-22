@@ -58,7 +58,8 @@ const round5 = (n: number) => Math.round(n / 5) * 5;
  * 2 g/kg; calories are the maintenance estimate. A pair the owner said
  * "Not now" to stays hidden until the numbers change.
  */
-export function targetSuggestion(settings: Row[], trendKg: number | null): { protein: number; kcal: number | null } | null {
+/** Targets worth changing: each is null unless it moved enough (protein ≥ 5 g, kcal ≥ 100 or unset). */
+export function targetSuggestion(settings: Row[], trendKg: number | null): { protein: number | null; kcal: number | null } | null {
   if (!num(trendKg)) return null;
   const protein = round5(2 * trendKg);
   const kcal = maintenanceKcal(profileFrom(settings), trendKg);
@@ -66,11 +67,12 @@ export function targetSuggestion(settings: Row[], trendKg: number | null): { pro
   const proteinMoved = Math.abs(protein - current.protein) >= 5;
   const kcalMoved = kcal !== null && (current.kcal === null || Math.abs(kcal - current.kcal) >= 100);
   if (!proteinMoved && !kcalMoved) return null;
-  if (getSetting(settings, "targetSuggestionDismissed") === suggestionKey({ protein, kcal })) return null;
-  return { protein, kcal };
+  const s = { protein: proteinMoved ? protein : null, kcal: kcalMoved ? kcal : null };
+  if (getSetting(settings, "targetSuggestionDismissed") === suggestionKey(s)) return null;
+  return s;
 }
 
-export const suggestionKey = (s: { protein: number; kcal: number | null }) => `${s.protein}|${s.kcal ?? ""}`;
+export const suggestionKey = (s: { protein: number | null; kcal: number | null }) => `${s.protein ?? ""}|${s.kcal ?? ""}`;
 
 /** Trend change over a week (Sun–Sat): trend by that Saturday minus trend by the Saturday before. */
 export function weekTrendChange(trend: { date: string; kg: number }[], weekStart: string): number | null {

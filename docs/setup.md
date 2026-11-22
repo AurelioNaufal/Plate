@@ -104,7 +104,7 @@ Nothing to do in Apps Script: this stage only changes the app. **Exporting:** Se
 
 ## Plan 3 update, stage 3 — budgets, protein value, Sunday review, theme
 
-Do this once in the Apps Script editor after Claude has pushed the new code: **Deploy → Manage deployments → ✏ → Version: New version → Deploy** (it adds the checks for budgets). Nothing to run.
+Do this once in the Apps Script editor after Claude has pushed the new code: **Deploy → Manage deployments → ✏ → Version: New version → Deploy** (it adds the checks for budgets), then run **`setup`** once more — it adds a **Hidden** column to Exercises, so an exercise you delete after logging sets is hidden instead and keeps its name in your history.
 
 - **Budgets:** Money → Budgets card → **Set budgets** (or Settings → Budgets). Type a monthly NT$ limit for any category; leave it blank for none. Bars turn orange from 80% and red when over; recurring charges count. Today shows what's left of your Food budget.
 - **Protein per NT$10:** saved foods and paid meals show it; Saved foods can be sorted by **Best protein value**.

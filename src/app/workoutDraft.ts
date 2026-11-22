@@ -4,7 +4,8 @@ import { lastSets, parseIdList, type Session } from "../shared/gym";
 // The workout in progress, kept on this device so closing the app mid-session
 // loses nothing. Ticked sets are also saved to the Sheet as they're ticked;
 // the draft adds the not-yet-ticked sets and their typed numbers.
-export type DraftSet = { id: string; weight: string; reps: string; done: boolean };
+/** edited: the owner typed in it (pre-filled numbers alone don't count). */
+export type DraftSet = { id: string; weight: string; reps: string; done: boolean; edited?: boolean };
 export type Draft = {
   sessionId: string;
   date: string;
@@ -100,7 +101,9 @@ export function startChoice(existing: Draft | null, routineId: string | null): "
   // An edit of a finished workout: its sets are all saved, and Start must never add to it.
   if (existing.editing) return "replace";
   if (existing.routineId === routineId) return "resume";
-  return savedSetCount(existing) > 0 ? "ask" : "replace";
+  return savedSetCount(existing) > 0 || typedSetCount(existing) > 0 ? "ask" : "replace";
 }
 
+/** Unticked sets the owner typed numbers into. */
+export const typedSetCount = (d: Draft) => d.exercises.reduce((n, e) => n + e.sets.filter((s) => !s.done && s.edited).length, 0);
 export const savedSetCount = (d: Draft) => d.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);

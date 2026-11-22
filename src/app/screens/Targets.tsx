@@ -62,7 +62,7 @@ export function Targets({ onBack }: { onBack(): void }) {
         )}
         <p className="muted small" style={{ margin: 0 }}>Leave calories blank if you only want to track protein. Targets change only when you save or tap Update.</p>
       </section>
-      <TargetSuggestion onUpdated={(sug) => { setProtein(String(sug.protein)); if (sug.kcal !== null) setKcal(String(sug.kcal)); }} />
+      <TargetSuggestion onUpdated={(sug) => { if (sug.protein !== null) setProtein(String(sug.protein)); if (sug.kcal !== null) setKcal(String(sug.kcal)); }} />
       <button className="btn btn-primary" onClick={submit}>Save</button>
     </main>
   );

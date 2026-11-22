@@ -12,7 +12,8 @@ const show = (v: unknown) => (v === null || v === undefined ? "" : String(v));
 
 export function Exercises({ onBack }: { onBack(): void }) {
   const { rows, save, apply } = useData();
-  const items = useMemo(() => [...(rows.Exercises ?? [])].sort(bySortOrder), [rows.Exercises]);
+  const all = useMemo(() => [...(rows.Exercises ?? [])].sort(bySortOrder), [rows.Exercises]);
+  const items = all.filter((e) => !e.Hidden);
   const [editing, setEditing] = useState<string | null>(null);
   const current = editing && editing !== "new" ? items.find((r) => r.ID === editing) : undefined;
 
@@ -24,9 +25,14 @@ export function Exercises({ onBack }: { onBack(): void }) {
           key={editing}
           existing={current}
           others={items.filter((r) => r.ID !== current?.ID)}
-          nextSortOrder={items.reduce((m, r) => Math.max(m, Number(r.SortOrder ?? 0)), 0) + 1}
-          onSave={(row) => { void save("Exercises", row); setEditing(null); }}
-          onDelete={current ? () => { void apply(planExerciseDelete(current, rows.Routines ?? [])); setEditing(null); } : undefined}
+          nextSortOrder={all.reduce((m, r) => Math.max(m, Number(r.SortOrder ?? 0)), 0) + 1}
+          onSave={(row) => {
+            // A new exercise named like a hidden one brings the hidden one back, with its history.
+            const hidden = !current && all.find((e) => e.Hidden && show(e.Name).trim().toLowerCase() === show(row.Name).toLowerCase());
+            void save("Exercises", hidden ? { ...hidden, Hidden: false } : row);
+            setEditing(null);
+          }}
+          onDelete={current ? () => { void apply(planExerciseDelete(current, rows.Routines ?? [], rows.Workouts ?? [])); setEditing(null); } : undefined}
           onCancel={() => setEditing(null)}
         />
       ) : (

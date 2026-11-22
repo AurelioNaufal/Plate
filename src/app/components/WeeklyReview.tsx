@@ -20,7 +20,14 @@ export function WeeklyReview({ review: r }: { review: Review }) {
     ],
     ["Calories", r.avgKcal === null ? "Not tracked" : `${r.avgKcal.toLocaleString("en-US")} kcal a day`],
     ["Gym", r.workouts === 1 ? "1 workout" : `${r.workouts} workouts`],
-    ["Weight", r.weightChange === null ? "No weigh-ins" : `Trend ${kg(r.weightChange)}`],
+    [
+      "Weight",
+      r.weightChange !== null
+        ? `Trend ${kg(r.weightChange)}${r.weightSince ? ` since ${formatShortDay(r.weightSince)}` : ""}`
+        : r.weightNow !== null
+          ? `Trend ${r.weightNow.toFixed(1)} kg · first weigh-ins`
+          : "No weigh-ins",
+    ],
   ];
   if (r.bestValue.length) {
     rows.push(["Best value", r.bestValue.map((b) => `${b.name} ${b.value.toFixed(1)} g per NT$10`).join(" · ")]);

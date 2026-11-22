@@ -227,3 +227,17 @@ test("removing a set renumbers a later ticked set even after its numbers were mi
   // The stored row keeps its saved numbers but moves to set 2, so no two sets share a number.
   expect(lastApplied()).toEqual([{ tab: "Workouts", row: expect.objectContaining({ ID: "w9", SetNumber: 2, WeightKg: 50, Reps: 5 }) }]);
 });
+
+test("a hidden exercise isn't offered under Add exercise", () => {
+  data.current = { rows: { Exercises: [...exercises, { ID: "old", Name: "Leg press", SortOrder: 9, Hidden: true }], Routines: routines, Workouts: before, Settings: [] }, apply };
+  render(<Workout draft={draft()} onDone={() => {}} />);
+  const options = [...(screen.getByLabelText("Add exercise") as HTMLSelectElement).options].map((o) => o.textContent);
+  expect(options).not.toContain("Leg press");
+});
+
+test("typing in a set marks it edited, so switching routines asks first", async () => {
+  render(<Workout draft={draft()} onDone={() => {}} />);
+  await userEvent.type(bench().getByLabelText("Set 1 reps"), "2");
+  expect(loadDraft()!.exercises[0].sets[0].edited).toBe(true);
+  expect(loadDraft()!.exercises[0].sets[1].edited).toBeFalsy();
+});

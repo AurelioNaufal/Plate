@@ -23,3 +23,15 @@ test("form fields are at least 16px so focusing one doesn't zoom the page", () =
 test("big numbers in half-width cards shrink on a narrow screen instead of spilling over", () => {
   expect(css).toMatch(/\.stat-value \{[^}]*font-size: clamp\(/);
 });
+
+test("table numbers are never cut off with an ellipsis", () => {
+  const cells = /\.data-table th, \.data-table td \{([^}]*)\}/.exec(css)?.[1] ?? "";
+  expect(cells).not.toContain("ellipsis");
+  expect(cells).toContain("padding-left");
+});
+
+test("the remembered theme is applied by an inline script before the app loads", () => {
+  const inline = html.indexOf("plate.theme");
+  expect(inline).toBeGreaterThan(-1);
+  expect(inline).toBeLessThan(html.indexOf('src="/src/app/main.tsx"'));
+});

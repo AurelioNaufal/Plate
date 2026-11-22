@@ -80,10 +80,13 @@ export function lastSets(workouts: Row[], exerciseId: string, excludeSessionId?:
  */
 export function bestSeries(workouts: Row[], exerciseId: string): { date: string; value: number; unit: "kg" | "reps" }[] {
   const mine = workouts.filter((w) => String(w.ExerciseID) === exerciseId);
-  const unit: "kg" | "reps" = mine.some((w) => num(w.WeightKg)) ? "kg" : "reps";
+  // The unit most workouts used: one weighted set doesn't turn a reps exercise into a kg chart.
+  const sessions = sessionsFrom(mine);
+  const weighted = sessions.filter((s) => s.sets.some((r) => num(r.WeightKg))).length;
+  const unit: "kg" | "reps" = weighted > 0 && weighted >= sessions.length - weighted ? "kg" : "reps";
   const field = unit === "kg" ? "WeightKg" : "Reps";
   const out: { date: string; value: number; unit: "kg" | "reps" }[] = [];
-  for (const s of [...sessionsFrom(mine)].reverse()) {
+  for (const s of [...sessions].reverse()) {
     const values = s.sets.map((r) => r[field]).filter(num);
     if (values.length) out.push({ date: s.date, value: Math.max(...values), unit });
   }
@@ -108,9 +111,11 @@ export function setLabel(r: Row): string {
 }
 
 /** Deletes an exercise and takes it out of every routine. Logged sets stay in history. */
-export function planExerciseDelete(exercise: Row, routines: Row[]): Change[] {
+/** Removes an exercise from its routines. One with logged sets is hidden, not removed, so its name stays in history. */
+export function planExerciseDelete(exercise: Row, routines: Row[], workouts: Row[] = []): Change[] {
   const id = String(exercise.ID);
-  const changes: Change[] = [{ tab: "Exercises", removeId: id }];
+  const used = workouts.some((w) => String(w.ExerciseID) === id);
+  const changes: Change[] = [used ? { tab: "Exercises", row: { ...exercise, Hidden: true } } : { tab: "Exercises", removeId: id }];
   for (const r of routines) {
     const ids = parseIdList(r.ExerciseIDs);
     if (ids.includes(id)) changes.push({ tab: "Routines", row: { ...r, ExerciseIDs: ids.filter((x) => x !== id).join(",") } });

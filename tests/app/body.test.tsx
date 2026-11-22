@@ -147,3 +147,9 @@ describe("changing the date", () => {
     expect(screen.getByLabelText("Weight (kg)")).toHaveValue("");
   });
 });
+
+test("the trend says when the last weigh-in was", () => {
+  setRows([w("2026-11-18", 60.4), w("2026-11-20", 60.2)]);
+  render(<Body today="2026-11-22" onOpenProfile={() => {}} onOpenSettings={() => {}} onOpenTargets={() => {}} />);
+  expect(within(screen.getByRole("region", { name: "Weight trend" })).getByText("Last weigh-in Fri 20 Nov")).toBeInTheDocument();
+});

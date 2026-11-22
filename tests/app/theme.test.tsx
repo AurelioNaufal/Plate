@@ -47,3 +47,17 @@ test("the Appearance switch saves the choice and applies it at once", async () =
   expect(document.documentElement.dataset.theme).toBe("light");
   expect(tabs.getByRole("tab", { name: "Light" })).toHaveAttribute("aria-selected", "true");
 });
+
+test("Appearance shows the Sheet's theme even when this phone remembers nothing", () => {
+  data.current = { rows: { Settings: [{ ID: "theme", Value: "dark" }] }, save: vi.fn() };
+  render(<Appearance onBack={() => {}} />);
+  expect(within(screen.getByRole("tablist", { name: "Theme" })).getByRole("tab", { name: "Dark" })).toHaveAttribute("aria-selected", "true");
+});
+
+test("the status bar colour follows a forced theme, and goes back for auto", () => {
+  document.head.innerHTML = '<meta name="theme-color" content="#F4F5F7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0E1013" media="(prefers-color-scheme: dark)">';
+  applyTheme("dark");
+  expect([...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute("content"))).toEqual(["#0E1013", "#0E1013"]);
+  applyTheme("auto");
+  expect([...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute("content"))).toEqual(["#F4F5F7", "#0E1013"]);
+});

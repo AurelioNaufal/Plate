@@ -15,7 +15,9 @@ const periodLabel = (p: Period) =>
   p.kind === "month" ? formatMonth(p.start)
   : p.kind === "year" ? p.start.slice(0, 4)
   : p.kind === "all" ? `All time · since ${formatFullDate(p.start)}`
-  : `${formatDay(p.start)} – ${formatDay(p.end)}`;
+  : p.start.slice(0, 4) !== p.end.slice(0, 4)
+    ? `${formatFullDate(p.start)} – ${formatFullDate(p.end)}`
+    : `${formatDay(p.start)} – ${formatDay(p.end)}`;
 
 /** One expense category: its total for the Money period, month by month, and its entries. */
 export function CategoryDetail({ category, period, onBack, onOpen }: Props) {
@@ -56,7 +58,7 @@ export function CategoryDetail({ category, period, onBack, onOpen }: Props) {
           format={formatNT}
         />
         <table className="data-table">
-          <caption className="small muted">Amounts in NT$ · share of this category's total</caption>
+          <caption className="small muted">Amounts in NT$ · share of the months shown</caption>
           <thead>
             <tr><th scope="col">Month</th><th scope="col">Spent</th><th scope="col">Share</th></tr>
           </thead>

@@ -21,6 +21,10 @@ export type WeeklyReview = {
   proteinTarget: number;
   workouts: number;
   weightChange: number | null;
+  /** The trend at the week's end when there were weigh-ins that week (shown when there's no change to compare). */
+  weightNow: number | null;
+  /** When the change is measured from a weigh-in more than a week before this one, its date. */
+  weightSince: string | null;
   /** The week's paid meals with the most protein per NT$10, best first (one per name). */
   bestValue: { name: string; value: number }[];
 };
@@ -48,14 +52,18 @@ export function weeklyReview(rows: Partial<Record<TabName, Row[]>>, weekStart: s
     }
   }
 
+  const trend = weightTrend(dailyWeights(rows.Body ?? []));
+  const lastAtOrBefore = (day: string) => [...trend].reverse().find((p) => p.date <= day) ?? null;
   const priceOf = new Map(txs.map((t) => [String(t.ID), t.Amount]));
-  const best = new Map<string, number>();
+  const best = new Map<string, { name: string; value: number }>();
   for (const m of meals) {
     if (typeof m.Date !== "string" || m.Date < weekStart || m.Date > weekEnd || !m.TransactionID) continue;
     const value = proteinPerTen(m.Protein, priceOf.get(String(m.TransactionID)));
     const name = String(m.Name ?? "").trim();
     if (value === null || !name) continue;
-    if (value > (best.get(name) ?? -1)) best.set(name, value);
+    const key = name.toLowerCase();
+    const seen = best.get(key);
+    if (!seen || value > seen.value) best.set(key, { name: seen?.name ?? name, value });
   }
 
   return {
@@ -71,7 +79,12 @@ export function weeklyReview(rows: Partial<Record<TabName, Row[]>>, weekStart: s
     trackedDays,
     proteinTarget: target,
     workouts: sessionCount(rows.Workouts ?? [], weekStart, weekEnd),
-    weightChange: weekTrendChange(weightTrend(dailyWeights(rows.Body ?? [])), weekStart),
-    bestValue: [...best].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 3),
+    weightChange: weekTrendChange(trend, weekStart),
+    weightNow: trend.some((p) => p.date >= weekStart && p.date <= weekEnd) ? (lastAtOrBefore(weekEnd)?.kg ?? null) : null,
+    weightSince: (() => {
+      const before = lastAtOrBefore(addDays(weekStart, -1));
+      return before && before.date < addDays(weekStart, -7) && weekTrendChange(trend, weekStart) !== null ? before.date : null;
+    })(),
+    bestValue: [...best.values()].sort((a, b) => b.value - a.value).slice(0, 3),
   };
 }

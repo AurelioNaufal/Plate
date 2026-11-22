@@ -82,13 +82,11 @@ describe("estimate and suggestions", () => {
   test("a suggestion is applied only when Update is tapped", async () => {
     setRows([...profile, { ID: "kcalTarget", Value: "2400" }], 63);
     render(<Targets onBack={() => {}} />);
-    expect(screen.getByText("Your weight trend is 63.0 kg. Suggested: 125 g protein, 2,450 kcal.")).toBeInTheDocument();
+    expect(screen.getByText("Your weight trend is 63.0 kg. Suggested: 125 g protein.")).toBeInTheDocument();
     expect(apply).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    expect(apply).toHaveBeenCalledWith([
-      { tab: "Settings", row: { ID: "proteinTarget", Value: "125" } },
-      { tab: "Settings", row: { ID: "kcalTarget", Value: "2450" } },
-    ]);
+    // Calories moved by only 50, so Update leaves your calorie target alone.
+    expect(apply).toHaveBeenCalledWith([{ tab: "Settings", row: { ID: "proteinTarget", Value: "125" } }]);
     expect(screen.getByLabelText("Protein (g/day)")).toHaveValue("125");
   });
 
@@ -96,6 +94,6 @@ describe("estimate and suggestions", () => {
     setRows([...profile, { ID: "kcalTarget", Value: "2400" }], 63);
     render(<Targets onBack={() => {}} />);
     await userEvent.click(screen.getByRole("button", { name: "Not now" }));
-    expect(save).toHaveBeenCalledWith("Settings", { ID: "targetSuggestionDismissed", Value: "125|2450" });
+    expect(save).toHaveBeenCalledWith("Settings", { ID: "targetSuggestionDismissed", Value: "125|" });
   });
 });

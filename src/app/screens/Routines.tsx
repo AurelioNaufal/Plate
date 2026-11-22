@@ -36,7 +36,7 @@ export function Routines({ onBack }: { onBack(): void }) {
             <button key={String(r.ID)} className="list-row" onClick={() => setEditing(String(r.ID))}>
               <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{show(r.Name)}</span>
-                <span className="small muted">{`${formatWeekdays(parseWeekdays(r.Weekdays))} · ${parseIdList(r.ExerciseIDs).length} exercises`}</span>
+                <span className="small muted">{`${formatWeekdays(parseWeekdays(r.Weekdays))} · ${parseIdList(r.ExerciseIDs).filter((id) => (rows.Exercises ?? []).some((e) => String(e.ID) === id && !e.Hidden)).length} exercises`}</span>
               </span>
               <span className="muted">›</span>
             </button>
@@ -71,7 +71,7 @@ function RoutineForm({ existing, exercises, onSave, onDelete, onCancel }: {
   }
 
   const addable = [...exercises]
-    .filter((e) => !ids.includes(String(e.ID)))
+    .filter((e) => !e.Hidden && !ids.includes(String(e.ID)))
     .sort((a, b) => Number(a.SortOrder ?? 0) - Number(b.SortOrder ?? 0));
 
   return (

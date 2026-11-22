@@ -6,15 +6,17 @@ export type OutFile = { name: string; text: string };
  * sharing fails, downloads each file, since a desktop share panel can't save to disk.
  * A share the owner cancels does nothing more.
  */
-export async function shareOrDownload(files: OutFile[]): Promise<void> {
+export type ExportResult = "shared" | "downloaded" | "cancelled";
+
+export async function shareOrDownload(files: OutFile[]): Promise<ExportResult> {
   const out = files.map((f) => new File([f.text], f.name, { type: "text/csv" }));
   const touch = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
   if (touch && typeof navigator.canShare === "function" && navigator.canShare({ files: out })) {
     try {
       await navigator.share({ files: out });
-      return;
+      return "shared";
     } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
+      if (e instanceof DOMException && e.name === "AbortError") return "cancelled";
       // Any other refusal: fall through to downloading.
     }
   }
@@ -28,4 +30,5 @@ export async function shareOrDownload(files: OutFile[]): Promise<void> {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
+  return "downloaded";
 }

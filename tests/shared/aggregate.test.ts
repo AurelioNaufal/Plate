@@ -108,3 +108,8 @@ describe("analytics (Plan 3)", () => {
     expect(c.reduce((a, m) => a + m.share, 0)).toBeCloseTo(1, 6);
   });
 });
+
+test("all time runs to the latest row when one is dated after today", () => {
+  const rows: Row[] = [{ ID: "a", Type: "expense", Date: "2026-10-01", Amount: 5 }, { ID: "b", Type: "expense", Date: "2026-12-03", Amount: 5 }];
+  expect(periodFor("all", "2026-11-22", rows)).toEqual({ kind: "all", start: "2026-10-01", end: "2026-12-03" });
+});

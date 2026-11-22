@@ -52,6 +52,7 @@ export function Money({ today = todayTaipei(), period: given, onPeriodChange, on
   const period = useMemo(() => (picked.kind === "all" ? periodFor("all", today, txs) : picked), [picked, today, txs]);
   const [shown, setShown] = useState<Shown>("all");
   const [category, setCategory] = useState("");
+  const [exported, setExported] = useState("");
 
   const s = useMemo(() => summarize(txs, period, today), [txs, period, today]);
   const flowRange = cashFlowRange(period);
@@ -239,11 +240,18 @@ export function Money({ today = todayTaipei(), period: given, onPeriodChange, on
             onClick={() => {
               const range = exportRange(period);
               const oldestFirst = [...listed].sort((a, b) => String(a.Date).localeCompare(String(b.Date)));
-              void shareOrDownload([{ name: exportFileName("Transactions", range), text: toCsv("Transactions", oldestFirst) }]);
+              // The name says which entries: plate-transactions-<range>[-income|-expenses][-<category>].csv
+              const which = [shown === "all" ? "" : shown === "income" ? "income" : "expenses", category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")]
+                .filter(Boolean).map((p) => `-${p}`).join("");
+              const name = exportFileName("Transactions", range).replace(/\.csv$/, `${which}.csv`);
+              setExported("");
+              void shareOrDownload([{ name, text: toCsv("Transactions", oldestFirst) }]).then((r) =>
+                setExported(r === "shared" ? "Shared" : r === "downloaded" ? "Downloaded" : ""));
             }}
           >
             Export
           </button>
+          {exported && <span className="small muted" role="status">{exported}</span>}
         </div>
         <TransactionList transactions={listed} pendingIds={pendingIds} mealsById={mealsById} shareOf={shareOf} onOpen={onOpen} />
       </section>
