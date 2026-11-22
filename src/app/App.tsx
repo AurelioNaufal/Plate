@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createApi, type ApiConfig } from "./api";
 import { loadConfig, saveConfig, clearConfig } from "./config";
 import { DataProvider, useData } from "./store";
@@ -9,6 +9,8 @@ import { CategoryDetail } from "./screens/CategoryDetail";
 import { Export } from "./screens/Export";
 import { Budgets } from "./screens/Budgets";
 import { Reviews } from "./screens/Reviews";
+import { Appearance } from "./screens/Appearance";
+import { syncTheme } from "./theme";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { NewEntry } from "./screens/NewEntry";
 import { Categories } from "./screens/Categories";
@@ -29,7 +31,7 @@ import { sessionsFrom } from "../shared/gym";
 import { todayTaipei } from "../shared/dates";
 import { periodFor, type Period } from "../shared/aggregate";
 
-type Screen = { name: Tab; asking?: string | null } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "reviews" } | { name: "budgets"; from: "money" | "settings" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
+type Screen = { name: Tab; asking?: string | null } | { name: "new"; editId?: string; editMealId?: string; back?: Screen } | { name: "category"; category: string } | { name: "export" } | { name: "reviews" } | { name: "appearance" } | { name: "budgets"; from: "money" | "settings" } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
   | { name: "workout"; draft: Draft } | { name: "exercise"; id: string } | { name: "exercises" } | { name: "routines" } | { name: "profile" };
 
@@ -58,6 +60,8 @@ type ShellProps = { config: ApiConfig | null; onSaveConfig(cfg: ApiConfig): void
 function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
   const { status, loadError, reload, pending, retry, rows } = useData();
   const [screen, setScreen] = useState<Screen>({ name: "today" });
+  // A theme chosen on another device arrives with the Sheet's Settings.
+  useEffect(() => syncTheme(rows.Settings ?? []), [rows.Settings]);
   // Lives here so Money keeps its period while a category or an entry is open.
   const [moneyPeriod, setMoneyPeriod] = useState<Period>(() => periodFor("week", todayTaipei()));
 
@@ -176,6 +180,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
             { label: "Routines", onOpen: () => setScreen({ name: "routines" }) },
             { label: "Targets", onOpen: () => setScreen({ name: "targets" }) },
             { label: "Profile", onOpen: () => setScreen({ name: "profile" }) },
+            { label: "Appearance", onOpen: () => setScreen({ name: "appearance" }) },
             { label: "Export", onOpen: () => setScreen({ name: "export" }) },
           ]}
         />
@@ -195,6 +200,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
         />
       )}
       {screen.name === "budgets" && <Budgets onBack={() => setScreen(screen.from === "money" ? { name: "money" } : { name: "settings" })} />}
+      {screen.name === "appearance" && <Appearance onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "reviews" && <Reviews onBack={() => setScreen({ name: "body" })} />}
       {screen.name === "export" && <Export onBack={() => setScreen({ name: "settings" })} />}
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}

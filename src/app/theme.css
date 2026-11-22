@@ -1,5 +1,6 @@
 /* Colour tokens from the mockups. Dark values follow the phone setting;
-   data-theme on <html> overrides it (the switch arrives in a later plan). */
+   data-theme on <html> (Settings → Appearance) overrides it. Keep the two dark
+   blocks identical: tests/app/contrast.test.ts checks that and every text pair. */
 :root {
   --bg: #F4F5F7;
   --card: #FFFFFF;
@@ -30,8 +31,6 @@
     --kcal: #F08A4B;
     --danger: #F97066;
     --track: #2A2F37;
-  --series-1: #5B8EF0;
-  --series-2: #DC7030;
     --series-1: #5B8EF0;
     --series-2: #DC7030;
     color-scheme: dark;
