@@ -13,10 +13,14 @@ import { SavedFoods } from "./screens/SavedFoods";
 import { QuickAdd } from "./screens/QuickAdd";
 import { Recurring } from "./screens/Recurring";
 import { Gym } from "./screens/Gym";
+import { Workout } from "./screens/Workout";
+import { draftFromSession, loadDraft, newDraft, saveDraft, type Draft } from "./workoutDraft";
+import { sessionsFrom } from "../shared/gym";
+import { todayTaipei } from "../shared/dates";
 
 type Screen = { name: Tab } | { name: "new"; editId?: string; editMealId?: string } | { name: "settings" } | { name: "categories" } | { name: "targets" }
   | { name: "savedFoods" } | { name: "quickAdd" } | { name: "recurring"; from: "today" | "settings" }
-  | { name: "workout" } | { name: "exercise"; id: string };
+  | { name: "workout"; draft: Draft } | { name: "exercise"; id: string };
 
 export function App() {
   const [config, setConfig] = useState<ApiConfig | null>(() => loadConfig());
@@ -41,7 +45,7 @@ export function App() {
 type ShellProps = { config: ApiConfig | null; onSaveConfig(cfg: ApiConfig): void; onClearConfig(): void };
 
 function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
-  const { status, loadError, reload, pending, retry } = useData();
+  const { status, loadError, reload, pending, retry, rows } = useData();
   const [screen, setScreen] = useState<Screen>({ name: "today" });
 
   if (status === "needs-setup") return <Settings config={config} onSave={onSaveConfig} />;
@@ -56,6 +60,16 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
     );
 
   const failed = pending.filter((p) => p.error);
+
+  /** Starts a routine (or a blank workout) unless one is already in progress on this phone. */
+  function startWorkout(routineId: string | null) {
+    const existing = loadDraft();
+    if (existing) return setScreen({ name: "workout", draft: existing });
+    const routine = routineId ? (rows.Routines ?? []).find((r) => r.ID === routineId) ?? null : null;
+    const d = newDraft(routine, rows.Exercises ?? [], rows.Workouts ?? [], todayTaipei(), () => crypto.randomUUID());
+    saveDraft(d);
+    setScreen({ name: "workout", draft: d });
+  }
   const tab = ["today", "money", "gym", "body"].includes(screen.name) ? (screen.name as Tab) : null;
 
   return (
@@ -81,13 +95,24 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
       {screen.name === "money" && <Money onOpen={(id) => setScreen({ name: "new", editId: id })} />}
       {screen.name === "gym" && (
         <Gym
-          onStart={() => setScreen({ name: "workout" })}
-          onResume={() => setScreen({ name: "workout" })}
-          onEditSession={() => setScreen({ name: "workout" })}
+          onStart={startWorkout}
+          onResume={() => {
+            const d = loadDraft();
+            if (d) setScreen({ name: "workout", draft: d });
+          }}
+          onEditSession={(id) => {
+            const s = sessionsFrom(rows.Workouts ?? []).find((x) => x.id === id);
+            if (!s) return;
+            const d = draftFromSession(s);
+            saveDraft(d);
+            setScreen({ name: "workout", draft: d });
+          }}
           onOpenExercise={(id) => setScreen({ name: "exercise", id })}
         />
       )}
-      {screen.name === "workout" && <Placeholder title="Workout" />}
+      {screen.name === "workout" && (
+        <Workout key={screen.draft.sessionId} draft={screen.draft} onDone={() => setScreen({ name: "gym" })} onLeave={() => setScreen({ name: "gym" })} />
+      )}
       {screen.name === "exercise" && <Placeholder title="Exercise" />}
       {screen.name === "body" && (
         <main className="screen">
@@ -130,7 +155,7 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
       )}
       {screen.name === "categories" && <Categories onBack={() => setScreen({ name: "settings" })} />}
 
-      {screen.name !== "new" && (
+      {screen.name !== "new" && screen.name !== "workout" && (
         <BottomNav current={tab} onTab={(t) => setScreen({ name: t })} onAdd={() => setScreen({ name: "new" })} />
       )}
     </>

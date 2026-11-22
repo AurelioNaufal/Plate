@@ -100,6 +100,13 @@ export function sessionCount(workouts: Row[], start: string, end: string): numbe
   return ids.size;
 }
 
+/** "40×10", or "×15" for a set with no weight. */
+export function setLabel(r: Row): string {
+  const kg = num(r.WeightKg) ? String(r.WeightKg) : "";
+  const reps = num(r.Reps) ? String(r.Reps) : "–";
+  return `${kg}×${reps}`;
+}
+
 /** Deletes an exercise and takes it out of every routine. Logged sets stay in history. */
 export function planExerciseDelete(exercise: Row, routines: Row[]): Change[] {
   const id = String(exercise.ID);

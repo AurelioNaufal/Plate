@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useData } from "../store";
 import { todayTaipei, weekday } from "../../shared/dates";
-import { formatWeekdays, parseIdList, parseWeekdays, routinesForDay, sessionsFrom, type Session } from "../../shared/gym";
+import { formatWeekdays, parseIdList, parseWeekdays, routinesForDay, sessionsFrom, setLabel, type Session } from "../../shared/gym";
 import type { Row } from "../../shared/schema";
 import { formatShortDay } from "../format";
 import { loadDraft } from "../workoutDraft";
@@ -15,13 +15,6 @@ type Props = {
 };
 
 const bySortOrder = (a: Row, b: Row) => Number(a.SortOrder ?? 0) - Number(b.SortOrder ?? 0);
-
-/** "40×10", or "×15" for a set with no weight. */
-export function setLabel(r: Row): string {
-  const kg = typeof r.WeightKg === "number" ? String(r.WeightKg) : "";
-  const reps = typeof r.Reps === "number" ? String(r.Reps) : "–";
-  return `${kg}×${reps}`;
-}
 
 export function Gym({ today = todayTaipei(), onStart, onResume, onOpenExercise, onEditSession }: Props) {
   const { rows } = useData();
