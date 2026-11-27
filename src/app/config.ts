@@ -26,6 +26,8 @@ export function clearConfig(): void {
 export function saveConfig(cfg: ApiConfig): boolean {
   try {
     localStorage.setItem(KEY, JSON.stringify(cfg));
+    // Ask the browser not to clear this app's storage (Safari otherwise may after a week unused).
+    void navigator.storage?.persist?.().catch(() => {});
     return true;
   } catch {
     return false;

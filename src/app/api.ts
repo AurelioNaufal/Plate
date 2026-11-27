@@ -31,7 +31,16 @@ export function createApi(cfg: ApiConfig, fetchImpl: typeof fetch = (...args) =>
     } catch {
       throw new ApiError("NETWORK", "The server sent an unexpected reply. Check the Web app URL in Settings.");
     }
-    if (!body.ok) throw new ApiError(body.error?.code ?? "SERVER", body.error?.message ?? "Something went wrong on the server");
+    if (!body.ok) {
+      // An older Apps Script version doesn't know newer actions (like batch): say how to update it.
+      if (body.error?.message?.startsWith("Unknown action")) {
+        throw new ApiError(
+          "OUTDATED",
+          "Your Apps Script is out of date, so this wasn't saved. In Apps Script: Deploy → Manage deployments → ✏ → Version: New version → Deploy. Then tap Retry.",
+        );
+      }
+      throw new ApiError(body.error?.code ?? "SERVER", body.error?.message ?? "Something went wrong on the server");
+    }
     return body.data as T;
   }
 

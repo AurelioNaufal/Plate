@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createApi, type ApiConfig } from "./api";
 import { loadConfig, saveConfig, clearConfig } from "./config";
 import { DataProvider, useData } from "./store";
@@ -50,9 +50,29 @@ export function App() {
 
   return (
     <DataProvider api={api}>
-      <Shell config={config} onSaveConfig={save} onClearConfig={forget} />
+      <CrashGuard>
+        <Shell config={config} onSaveConfig={save} onClearConfig={forget} />
+      </CrashGuard>
     </DataProvider>
   );
+}
+
+/** A screen that throws while drawing shows a way back instead of a blank app. The connection is kept. */
+class CrashGuard extends Component<{ children: ReactNode }, { crashed: boolean }> {
+  state = { crashed: false };
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+  render() {
+    if (!this.state.crashed) return this.props.children;
+    return (
+      <main className="center">
+        <p>Something went wrong on this screen.</p>
+        <p className="small muted" style={{ margin: 0 }}>Entries that were already saved are safe in your Sheet.</p>
+        <button className="btn btn-primary" onClick={() => location.reload()}>Reload</button>
+      </main>
+    );
+  }
 }
 
 type ShellProps = { config: ApiConfig | null; onSaveConfig(cfg: ApiConfig): void; onClearConfig(): void };
@@ -60,6 +80,8 @@ type ShellProps = { config: ApiConfig | null; onSaveConfig(cfg: ApiConfig): void
 function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
   const { status, loadError, reload, pending, retry, rows } = useData();
   const [screen, setScreen] = useState<Screen>({ name: "today" });
+  // Fixing the connection after a failed load: the saved one stays until a new one is saved.
+  const [fixing, setFixing] = useState(false);
   // A theme chosen on another device arrives with the Sheet's Settings.
   useEffect(() => syncTheme(rows.Settings ?? []), [rows.Settings]);
   // Lives here so Money keeps its period while a category or an entry is open.
@@ -67,12 +89,13 @@ function Shell({ config, onSaveConfig, onClearConfig }: ShellProps) {
 
   if (status === "needs-setup") return <Settings config={config} onSave={onSaveConfig} />;
   if (status === "loading") return <main className="center muted">Loading your data…</main>;
+  if (status === "error" && fixing) return <Settings config={config} onSave={(c) => { setFixing(false); onSaveConfig(c); }} />;
   if (status === "error")
     return (
       <main className="center">
         <p>Couldn't load your data: {loadError}</p>
         <button className="btn btn-primary" onClick={reload}>Try again</button>
-        <button className="btn-link" onClick={onClearConfig}>Change connection</button>
+        <button className="btn-link" onClick={() => setFixing(true)}>Change connection</button>
       </main>
     );
 

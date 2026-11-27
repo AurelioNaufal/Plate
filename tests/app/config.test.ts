@@ -32,3 +32,10 @@ test("a corrupt saved value reads as no connection", () => {
   localStorage.setItem("financeapp.config", "{oops");
   expect(loadConfig()).toBeNull();
 });
+
+test("saving a connection asks the browser to keep this app's storage", () => {
+  const persist = vi.fn(async () => true);
+  Object.defineProperty(navigator, "storage", { value: { persist }, configurable: true });
+  saveConfig({ url: "https://x/exec", token: "t" });
+  expect(persist).toHaveBeenCalled();
+});

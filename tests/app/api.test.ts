@@ -62,3 +62,10 @@ test("a non-JSON reply becomes a NETWORK ApiError", async () => {
   const err = await createApi(cfg, impl).ping().catch((e) => e);
   expect(err.code).toBe("NETWORK");
 });
+
+test("an out-of-date Apps Script says how to update it", async () => {
+  const { impl } = fakeFetch({ ok: false, error: { code: "BAD_REQUEST", message: "Unknown action: batch" } });
+  const err = await createApi(cfg, impl).batch([{ tab: "Transactions", removeId: "a" }]).catch((e) => e);
+  expect(err.code).toBe("OUTDATED");
+  expect(err.message).toBe("Your Apps Script is out of date, so this wasn't saved. In Apps Script: Deploy → Manage deployments → ✏ → Version: New version → Deploy. Then tap Retry.");
+});
